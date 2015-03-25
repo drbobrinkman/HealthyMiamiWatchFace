@@ -187,10 +187,12 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
             mCirclePaint = new Paint();
             mCirclePaint.setColor(mInteractiveCircleColor);
             mCirclePaint.setStyle(Paint.Style.FILL);
+            mCirclePaint.setAntiAlias(true);
 
             mCircleBorderPaint = new Paint();
-            mCirclePaint.setColor(mInteractiveCircleBorderColor);
-            mCirclePaint.setStyle(Paint.Style.STROKE);
+            mCircleBorderPaint.setColor(mInteractiveCircleBorderColor);
+            mCircleBorderPaint.setStyle(Paint.Style.STROKE);
+            mCircleBorderPaint.setAntiAlias(true);
 
             mHourPaint = createTextPaint(mInteractiveDigitsColor, BOLD_TYPEFACE);
             mMinutePaint = createTextPaint(mInteractiveDigitsColor);
@@ -409,6 +411,12 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
 
             // Draw the background.
             canvas.drawRect(0, 0, bounds.width(), bounds.height(), mBackgroundPaint);
+
+            // Draw the circle that goes under the time
+            float radius = (float)bounds.width()/2;
+            int insetOffset = (int)(radius/(2*1.41421356237));
+            canvas.drawCircle(bounds.width()/2 + insetOffset, bounds.height()/2 - insetOffset,
+                    (int)(radius/2),mCirclePaint);
 
             // Draw the hours.
             float x = mXOffset;
