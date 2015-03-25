@@ -133,8 +133,10 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
         Paint mBackgroundPaint;
         Paint mHourPaint;
         Paint mMinutePaint;
-        Paint mSecondPaint;
-        Paint mAmPmPaint;
+        Paint mCirclePaint;
+        Paint mCircleBorderPaint;
+        //Paint mSecondPaint;
+        //Paint mAmPmPaint;
         Paint mColonPaint;
         float mColonWidth;
         boolean mMute;
@@ -146,7 +148,8 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
         String mPmString;
         int mInteractiveBackgroundColor = Color.argb(255, 196, 18, 48);
         int mInteractiveDigitsColor = Color.argb(255,255,255,255);
-
+        int mInteractiveCircleColor = Color.argb(128,0,0,0);
+        int mInteractiveCircleBorderColor = Color.argb(128,255,255,255);
 
         /**
          * Whether the display supports fewer bits for each color in ambient mode. When true, we
@@ -180,10 +183,19 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
 
             mBackgroundPaint = new Paint();
             mBackgroundPaint.setColor(mInteractiveBackgroundColor);
+
+            mCirclePaint = new Paint();
+            mCirclePaint.setColor(mInteractiveCircleColor);
+            mCirclePaint.setStyle(Paint.Style.FILL);
+
+            mCircleBorderPaint = new Paint();
+            mCirclePaint.setColor(mInteractiveCircleBorderColor);
+            mCirclePaint.setStyle(Paint.Style.STROKE);
+
             mHourPaint = createTextPaint(mInteractiveDigitsColor, BOLD_TYPEFACE);
             mMinutePaint = createTextPaint(mInteractiveDigitsColor);
-            mSecondPaint = createTextPaint(mInteractiveDigitsColor);
-            mAmPmPaint = createTextPaint(resources.getColor(R.color.digital_am_pm));
+            //mSecondPaint = createTextPaint(mInteractiveDigitsColor);
+            //mAmPmPaint = createTextPaint(resources.getColor(R.color.digital_am_pm));
             mColonPaint = createTextPaint(resources.getColor(R.color.digital_colons));
 
             mTime = new Time();
@@ -271,9 +283,9 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
                     ? R.dimen.digital_am_pm_size_round : R.dimen.digital_am_pm_size);
 
             mHourPaint.setTextSize(textSize);
-            mMinutePaint.setTextSize(textSize);
-            mSecondPaint.setTextSize(textSize);
-            mAmPmPaint.setTextSize(amPmSize);
+            mMinutePaint.setTextSize(textSize/2);
+            //mSecondPaint.setTextSize(textSize/2);
+            //mAmPmPaint.setTextSize(amPmSize);
             mColonPaint.setTextSize(textSize);
 
             mColonWidth = mColonPaint.measureText(COLON_STRING);
@@ -311,14 +323,20 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
             }
             adjustPaintColorToCurrentMode(mBackgroundPaint, mInteractiveBackgroundColor,
                     Color.argb(255,0,0,0));
+            adjustPaintColorToCurrentMode(mCirclePaint, mInteractiveCircleColor,
+                    Color.argb(255,0,0,0));
+            adjustPaintColorToCurrentMode(mCircleBorderPaint, mInteractiveCircleBorderColor,
+                    Color.argb(255,255,255,255));
 
             if (mLowBitAmbient) {
                 boolean antiAlias = !inAmbientMode;
                 mHourPaint.setAntiAlias(antiAlias);
                 mMinutePaint.setAntiAlias(antiAlias);
-                mSecondPaint.setAntiAlias(antiAlias);
-                mAmPmPaint.setAntiAlias(antiAlias);
+                //mSecondPaint.setAntiAlias(antiAlias);
+                //mAmPmPaint.setAntiAlias(antiAlias);
                 mColonPaint.setAntiAlias(antiAlias);
+                mCirclePaint.setAntiAlias(antiAlias);
+                mCircleBorderPaint.setAntiAlias(antiAlias);
             }
             invalidate();
 
@@ -349,7 +367,7 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
                 mHourPaint.setAlpha(alpha);
                 mMinutePaint.setAlpha(alpha);
                 mColonPaint.setAlpha(alpha);
-                mAmPmPaint.setAlpha(alpha);
+                //mAmPmPaint.setAlpha(alpha);
                 invalidate();
             }
         }
@@ -370,11 +388,6 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
             if (!isInAmbientMode() && paint != null) {
                 paint.setColor(interactiveColor);
             }
-        }
-
-        private void setInteractiveBackgroundColor(int color) {
-            mInteractiveBackgroundColor = color;
-            updatePaintIfInteractive(mBackgroundPaint, color);
         }
 
         private String formatTwoDigitNumber(int hour) {
@@ -409,17 +422,6 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
             String minuteString = formatTwoDigitNumber(mTime.minute);
             canvas.drawText(minuteString, x, mYOffset, mMinutePaint);
             x += mMinutePaint.measureText(minuteString);
-
-            // In ambient and mute modes, draw AM/PM. Otherwise, draw a second blinking
-            // colon followed by the seconds.
-            if (isInAmbientMode() || mMute) {
-                x += mColonWidth;
-                canvas.drawText(getAmPmString(mTime.hour), x, mYOffset, mAmPmPaint);
-            } else {
-                x += mColonWidth;
-                canvas.drawText(formatTwoDigitNumber(mTime.second), x, mYOffset,
-                        mSecondPaint);
-            }
         }
 
         /**
