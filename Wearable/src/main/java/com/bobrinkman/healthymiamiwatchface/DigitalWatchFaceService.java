@@ -67,11 +67,9 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
 
     /**
      * Update rate in milliseconds for normal (not ambient and not mute) mode.
-     * NOTE: onDraw() is invalidating in normal mode, so update rate will be MUCH faster.
-     * This needs thinking about .. maybe set update rate here based on pixels in
-     * circumference of circle? TODO
+     * 20 FPS seems to be sufficiently smooth looking
      */
-    private static final long NORMAL_UPDATE_RATE_MS = 500;
+    private static final long NORMAL_UPDATE_RATE_MS = 1000/20;
 
     /**
      * Update rate in milliseconds for mute mode. We update every minute, like in ambient mode.
@@ -437,9 +435,6 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
             canvas.drawText(minuteString, centerX,
                     centerY+(totalHeight/2), mMinutePaint);
 
-            if (isVisible() && !isInAmbientMode()) {
-                invalidate();
-            }
         }
 
         /**
