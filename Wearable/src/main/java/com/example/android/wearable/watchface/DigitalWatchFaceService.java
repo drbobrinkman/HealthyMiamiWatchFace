@@ -22,6 +22,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.res.Resources;
 import android.graphics.Canvas;
+import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Rect;
 import android.graphics.Typeface;
@@ -80,7 +81,7 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
         return new Engine();
     }
 
-    private class Engine extends CanvasWatchFaceService.Engine implements DataApi.DataListener,
+    private class Engine extends CanvasWatchFaceService.Engine implements /*DataApi.DataListener,*/
             GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener {
         static final String COLON_STRING = ":";
 
@@ -145,14 +146,14 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
         float mYOffset;
         String mAmString;
         String mPmString;
-        int mInteractiveBackgroundColor =
-                DigitalWatchFaceUtil.COLOR_VALUE_DEFAULT_AND_AMBIENT_BACKGROUND;
-        int mInteractiveHourDigitsColor =
-                DigitalWatchFaceUtil.COLOR_VALUE_DEFAULT_AND_AMBIENT_HOUR_DIGITS;
-        int mInteractiveMinuteDigitsColor =
-                DigitalWatchFaceUtil.COLOR_VALUE_DEFAULT_AND_AMBIENT_MINUTE_DIGITS;
-        int mInteractiveSecondDigitsColor =
-                DigitalWatchFaceUtil.COLOR_VALUE_DEFAULT_AND_AMBIENT_SECOND_DIGITS;
+        int mInteractiveBackgroundColor = Color.argb(255, 196, 18, 48);
+                //DigitalWatchFaceUtil.COLOR_VALUE_DEFAULT_AND_AMBIENT_BACKGROUND;
+        int mInteractiveHourDigitsColor = Color.argb(255,255,255,255);
+                //DigitalWatchFaceUtil.COLOR_VALUE_DEFAULT_AND_AMBIENT_HOUR_DIGITS;
+        int mInteractiveMinuteDigitsColor = Color.argb(255,255,255,255);
+                //DigitalWatchFaceUtil.COLOR_VALUE_DEFAULT_AND_AMBIENT_MINUTE_DIGITS;
+        int mInteractiveSecondDigitsColor = Color.argb(255,255,255,255);
+                //DigitalWatchFaceUtil.COLOR_VALUE_DEFAULT_AND_AMBIENT_SECOND_DIGITS;
 
         /**
          * Whether the display supports fewer bits for each color in ambient mode. When true, we
@@ -225,7 +226,7 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
                 unregisterReceiver();
 
                 if (mGoogleApiClient != null && mGoogleApiClient.isConnected()) {
-                    Wearable.DataApi.removeListener(mGoogleApiClient, this);
+                    //Wearable.DataApi.removeListener(mGoogleApiClient, this);
                     mGoogleApiClient.disconnect();
                 }
             }
@@ -309,15 +310,15 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
                 Log.d(TAG, "onAmbientModeChanged: " + inAmbientMode);
             }
             adjustPaintColorToCurrentMode(mBackgroundPaint, mInteractiveBackgroundColor,
-                    DigitalWatchFaceUtil.COLOR_VALUE_DEFAULT_AND_AMBIENT_BACKGROUND);
+                    Color.argb(255,0,0,0));
             adjustPaintColorToCurrentMode(mHourPaint, mInteractiveHourDigitsColor,
-                    DigitalWatchFaceUtil.COLOR_VALUE_DEFAULT_AND_AMBIENT_HOUR_DIGITS);
+                    Color.argb(255,255,255,255));
             adjustPaintColorToCurrentMode(mMinutePaint, mInteractiveMinuteDigitsColor,
-                    DigitalWatchFaceUtil.COLOR_VALUE_DEFAULT_AND_AMBIENT_MINUTE_DIGITS);
+                    Color.argb(255,255,255,255));
             // Actually, the seconds are not rendered in the ambient mode, so we could pass just any
             // value as ambientColor here.
             adjustPaintColorToCurrentMode(mSecondPaint, mInteractiveSecondDigitsColor,
-                    DigitalWatchFaceUtil.COLOR_VALUE_DEFAULT_AND_AMBIENT_SECOND_DIGITS);
+                    Color.argb(255,255,255,255));
 
             if (mLowBitAmbient) {
                 boolean antiAlias = !inAmbientMode;
@@ -477,7 +478,7 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
         private boolean shouldTimerBeRunning() {
             return isVisible() && !isInAmbientMode();
         }
-
+/*
         private void updateConfigDataItemAndUiOnStartup() {
             DigitalWatchFaceUtil.fetchConfigDataMap(mGoogleApiClient,
                     new DigitalWatchFaceUtil.FetchConfigDataMapCallback() {
@@ -556,14 +557,14 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
                 invalidate();
             }
         }
-
+*/
         /**
          * Updates the color of a UI item according to the given {@code configKey}. Does nothing if
          * {@code configKey} isn't recognized.
          *
          * @return whether UI has been updated
          */
-        private boolean updateUiForKey(String configKey, int color) {
+  /*      private boolean updateUiForKey(String configKey, int color) {
             if (configKey.equals(DigitalWatchFaceUtil.KEY_BACKGROUND_COLOR)) {
                 setInteractiveBackgroundColor(color);
             } else if (configKey.equals(DigitalWatchFaceUtil.KEY_HOURS_COLOR)) {
@@ -577,15 +578,15 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
                 return false;
             }
             return true;
-        }
+        }*/
 
         @Override  // GoogleApiClient.ConnectionCallbacks
         public void onConnected(Bundle connectionHint) {
             if (Log.isLoggable(TAG, Log.DEBUG)) {
                 Log.d(TAG, "onConnected: " + connectionHint);
             }
-            Wearable.DataApi.addListener(mGoogleApiClient, Engine.this);
-            updateConfigDataItemAndUiOnStartup();
+            //Wearable.DataApi.addListener(mGoogleApiClient, Engine.this);
+            //updateConfigDataItemAndUiOnStartup();
         }
 
         @Override  // GoogleApiClient.ConnectionCallbacks
