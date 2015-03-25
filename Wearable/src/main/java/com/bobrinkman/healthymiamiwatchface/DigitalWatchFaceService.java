@@ -60,10 +60,8 @@ import java.util.concurrent.TimeUnit;
 public class DigitalWatchFaceService extends CanvasWatchFaceService {
     private static final String TAG = "DigitalWatchFaceService";
 
-    private static final Typeface BOLD_TYPEFACE =
-            Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD);
-    private static final Typeface NORMAL_TYPEFACE =
-            Typeface.create(Typeface.SANS_SERIF, Typeface.NORMAL);
+    private Typeface BOLD_TYPEFACE = null;
+    private Typeface NORMAL_TYPEFACE = null;
 
     /**
      * Update rate in milliseconds for normal (not ambient and not mute) mode. We update twice
@@ -141,19 +139,14 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
         float mColonWidth;
         boolean mMute;
         Time mTime;
-        boolean mShouldDrawColons;
+
         float mXOffset;
         float mYOffset;
         String mAmString;
         String mPmString;
         int mInteractiveBackgroundColor = Color.argb(255, 196, 18, 48);
-                //DigitalWatchFaceUtil.COLOR_VALUE_DEFAULT_AND_AMBIENT_BACKGROUND;
-        int mInteractiveHourDigitsColor = Color.argb(255,255,255,255);
-                //DigitalWatchFaceUtil.COLOR_VALUE_DEFAULT_AND_AMBIENT_HOUR_DIGITS;
-        int mInteractiveMinuteDigitsColor = Color.argb(255,255,255,255);
-                //DigitalWatchFaceUtil.COLOR_VALUE_DEFAULT_AND_AMBIENT_MINUTE_DIGITS;
-        int mInteractiveSecondDigitsColor = Color.argb(255,255,255,255);
-                //DigitalWatchFaceUtil.COLOR_VALUE_DEFAULT_AND_AMBIENT_SECOND_DIGITS;
+        int mInteractiveDigitsColor = Color.argb(255,255,255,255);
+
 
         /**
          * Whether the display supports fewer bits for each color in ambient mode. When true, we
@@ -168,6 +161,13 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
             }
             super.onCreate(holder);
 
+            if(BOLD_TYPEFACE == null) {
+                BOLD_TYPEFACE = Typeface.createFromAsset(getAssets(), "Helvetica.ttf");
+            }
+            if(NORMAL_TYPEFACE == null) {
+                NORMAL_TYPEFACE = Typeface.createFromAsset(getAssets(), "HelveticaLight.ttf");
+            }
+
             setWatchFaceStyle(new WatchFaceStyle.Builder(DigitalWatchFaceService.this)
                     .setCardPeekMode(WatchFaceStyle.PEEK_MODE_VARIABLE)
                     .setBackgroundVisibility(WatchFaceStyle.BACKGROUND_VISIBILITY_INTERRUPTIVE)
@@ -180,9 +180,9 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
 
             mBackgroundPaint = new Paint();
             mBackgroundPaint.setColor(mInteractiveBackgroundColor);
-            mHourPaint = createTextPaint(mInteractiveHourDigitsColor, BOLD_TYPEFACE);
-            mMinutePaint = createTextPaint(mInteractiveMinuteDigitsColor);
-            mSecondPaint = createTextPaint(mInteractiveSecondDigitsColor);
+            mHourPaint = createTextPaint(mInteractiveDigitsColor, BOLD_TYPEFACE);
+            mMinutePaint = createTextPaint(mInteractiveDigitsColor);
+            mSecondPaint = createTextPaint(mInteractiveDigitsColor);
             mAmPmPaint = createTextPaint(resources.getColor(R.color.digital_am_pm));
             mColonPaint = createTextPaint(resources.getColor(R.color.digital_colons));
 
@@ -311,14 +311,6 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
             }
             adjustPaintColorToCurrentMode(mBackgroundPaint, mInteractiveBackgroundColor,
                     Color.argb(255,0,0,0));
-            adjustPaintColorToCurrentMode(mHourPaint, mInteractiveHourDigitsColor,
-                    Color.argb(255,255,255,255));
-            adjustPaintColorToCurrentMode(mMinutePaint, mInteractiveMinuteDigitsColor,
-                    Color.argb(255,255,255,255));
-            // Actually, the seconds are not rendered in the ambient mode, so we could pass just any
-            // value as ambientColor here.
-            adjustPaintColorToCurrentMode(mSecondPaint, mInteractiveSecondDigitsColor,
-                    Color.argb(255,255,255,255));
 
             if (mLowBitAmbient) {
                 boolean antiAlias = !inAmbientMode;
@@ -385,21 +377,6 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
             updatePaintIfInteractive(mBackgroundPaint, color);
         }
 
-        private void setInteractiveHourDigitsColor(int color) {
-            mInteractiveHourDigitsColor = color;
-            updatePaintIfInteractive(mHourPaint, color);
-        }
-
-        private void setInteractiveMinuteDigitsColor(int color) {
-            mInteractiveMinuteDigitsColor = color;
-            updatePaintIfInteractive(mMinutePaint, color);
-        }
-
-        private void setInteractiveSecondDigitsColor(int color) {
-            mInteractiveSecondDigitsColor = color;
-            updatePaintIfInteractive(mSecondPaint, color);
-        }
-
         private String formatTwoDigitNumber(int hour) {
             return String.format("%02d", hour);
         }
@@ -417,10 +394,6 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
         public void onDraw(Canvas canvas, Rect bounds) {
             mTime.setToNow();
 
-            // Show colons for the first half of each second so the colons blink on when the time
-            // updates.
-            mShouldDrawColons = (System.currentTimeMillis() % 1000) < 500;
-
             // Draw the background.
             canvas.drawRect(0, 0, bounds.width(), bounds.height(), mBackgroundPaint);
 
@@ -430,11 +403,6 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
             canvas.drawText(hourString, x, mYOffset, mHourPaint);
             x += mHourPaint.measureText(hourString);
 
-            // In ambient and mute modes, always draw the first colon. Otherwise, draw the
-            // first colon for the first half of each second.
-            if (isInAmbientMode() || mMute || mShouldDrawColons) {
-                canvas.drawText(COLON_STRING, x, mYOffset, mColonPaint);
-            }
             x += mColonWidth;
 
             // Draw the minutes.
@@ -448,9 +416,6 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
                 x += mColonWidth;
                 canvas.drawText(getAmPmString(mTime.hour), x, mYOffset, mAmPmPaint);
             } else {
-                if (mShouldDrawColons) {
-                    canvas.drawText(COLON_STRING, x, mYOffset, mColonPaint);
-                }
                 x += mColonWidth;
                 canvas.drawText(formatTwoDigitNumber(mTime.second), x, mYOffset,
                         mSecondPaint);
