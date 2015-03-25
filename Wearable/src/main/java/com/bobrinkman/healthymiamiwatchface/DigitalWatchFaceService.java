@@ -66,8 +66,10 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
     private Typeface NORMAL_TYPEFACE = null;
 
     /**
-     * Update rate in milliseconds for normal (not ambient and not mute) mode. We update twice
-     * a second to blink the colons.
+     * Update rate in milliseconds for normal (not ambient and not mute) mode.
+     * NOTE: onDraw() is invalidating in normal mode, so update rate will be MUCH faster.
+     * This needs thinking about .. maybe set update rate here based on pixels in
+     * circumference of circle? TODO
      */
     private static final long NORMAL_UPDATE_RATE_MS = 500;
 
@@ -138,17 +140,10 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
         Paint mCirclePaint;
         Paint mCircleBorderPaint;
         DashPathEffect mAmbientDashEffect;
-        //Paint mSecondPaint;
-        //Paint mAmPmPaint;
-        Paint mColonPaint;
-        float mColonWidth;
+
         boolean mMute;
         Time mTime;
 
-        float mXOffset;
-        float mYOffset;
-        String mAmString;
-        String mPmString;
         int mInteractiveBackgroundColor = Color.argb(255, 196, 18, 48);
         int mInteractiveDigitsColor = Color.argb(255,255,255,255);
         int mInteractiveCircleColor = Color.argb(32,0,0,0);
@@ -180,9 +175,6 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
                     .setShowSystemUiTime(false)
                     .build());
             Resources resources = DigitalWatchFaceService.this.getResources();
-            mYOffset = resources.getDimension(R.dimen.digital_y_offset);
-            mAmString = resources.getString(R.string.digital_am);
-            mPmString = resources.getString(R.string.digital_pm);
 
             mBackgroundPaint = new Paint();
             mBackgroundPaint.setColor(mInteractiveBackgroundColor);
@@ -202,9 +194,6 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
 
             mHourPaint = createTextPaint(mInteractiveDigitsColor, BOLD_TYPEFACE);
             mMinutePaint = createTextPaint(mInteractiveDigitsColor);
-            //mSecondPaint = createTextPaint(mInteractiveDigitsColor);
-            //mAmPmPaint = createTextPaint(resources.getColor(R.color.digital_am_pm));
-            mColonPaint = createTextPaint(resources.getColor(R.color.digital_colons));
 
             mTime = new Time();
         }
@@ -224,6 +213,7 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
             paint.setColor(defaultInteractiveColor);
             paint.setTypeface(typeface);
             paint.setAntiAlias(true);
+            paint.setTextAlign(Paint.Align.CENTER);
             return paint;
         }
 
@@ -283,20 +273,12 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
             // Load resources that have alternate values for round watches.
             Resources resources = DigitalWatchFaceService.this.getResources();
             boolean isRound = insets.isRound();
-            mXOffset = resources.getDimension(isRound
-                    ? R.dimen.digital_x_offset_round : R.dimen.digital_x_offset);
+
             float textSize = resources.getDimension(isRound
                     ? R.dimen.digital_text_size_round : R.dimen.digital_text_size);
-            float amPmSize = resources.getDimension(isRound
-                    ? R.dimen.digital_am_pm_size_round : R.dimen.digital_am_pm_size);
 
             mHourPaint.setTextSize(textSize);
             mMinutePaint.setTextSize(textSize/2);
-            //mSecondPaint.setTextSize(textSize/2);
-            //mAmPmPaint.setTextSize(amPmSize);
-            mColonPaint.setTextSize(textSize);
-
-            mColonWidth = mColonPaint.measureText(COLON_STRING);
         }
 
         @Override
@@ -343,9 +325,6 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
                 boolean antiAlias = !inAmbientMode;
                 mHourPaint.setAntiAlias(antiAlias);
                 mMinutePaint.setAntiAlias(antiAlias);
-                //mSecondPaint.setAntiAlias(antiAlias);
-                //mAmPmPaint.setAntiAlias(antiAlias);
-                mColonPaint.setAntiAlias(antiAlias);
                 mCirclePaint.setAntiAlias(antiAlias);
                 mCircleBorderPaint.setAntiAlias(antiAlias);
             }
@@ -377,8 +356,6 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
                 int alpha = inMuteMode ? MUTE_ALPHA : NORMAL_ALPHA;
                 mHourPaint.setAlpha(alpha);
                 mMinutePaint.setAlpha(alpha);
-                mColonPaint.setAlpha(alpha);
-                //mAmPmPaint.setAlpha(alpha);
                 invalidate();
             }
         }
@@ -410,10 +387,6 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
             return (result == 0) ? 12 : result;
         }
 
-        private String getAmPmString(int hour) {
-            return (hour < 12) ? mAmString : mPmString;
-        }
-
         @Override
         public void onDraw(Canvas canvas, Rect bounds) {
             mTime.setToNow();
@@ -429,9 +402,11 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
             canvas.drawCircle(bounds.width()/2 + insetOffset, bounds.height()/2 - insetOffset,
                     circleRadius,mCirclePaint);
 
-            int left = (bounds.width() / 2 + insetOffset) - circleRadius;
+            int centerX = (bounds.width()/2 + insetOffset);
+            int centerY = (bounds.height()/2 - insetOffset);
+            int left = centerX - circleRadius;
             int right = left + 2 * circleRadius;
-            int top = (bounds.height() / 2 - insetOffset) - circleRadius;
+            int top = centerY - circleRadius;
             int bot = top + 2 * circleRadius;
             if(!isInAmbientMode()) {
                 float pctAround = (mTime.second + millis/1000.0f)/60.0f;
@@ -448,18 +423,19 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
                         360, false, mCircleBorderPaint);
             }
 
+            float hourHeight = -mHourPaint.getFontMetrics().ascent
+                    + mHourPaint.getFontMetrics().leading/2;
+            float minuteHeight =  -mMinutePaint.getFontMetrics().ascent
+                    + mMinutePaint.getFontMetrics().leading/2;
+            float totalHeight = hourHeight + minuteHeight;
             // Draw the hours.
-            float x = mXOffset;
             String hourString = String.valueOf(convertTo12Hour(mTime.hour));
-            canvas.drawText(hourString, x, mYOffset, mHourPaint);
-            x += mHourPaint.measureText(hourString);
-
-            x += mColonWidth;
+            canvas.drawText(hourString, centerX, centerY + (hourHeight-(totalHeight/2)), mHourPaint);
 
             // Draw the minutes.
             String minuteString = formatTwoDigitNumber(mTime.minute);
-            canvas.drawText(minuteString, x, mYOffset, mMinutePaint);
-            x += mMinutePaint.measureText(minuteString);
+            canvas.drawText(minuteString, centerX,
+                    centerY+(totalHeight/2), mMinutePaint);
 
             if (isVisible() && !isInAmbientMode()) {
                 invalidate();
