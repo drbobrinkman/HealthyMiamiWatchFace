@@ -23,6 +23,7 @@ import android.content.IntentFilter;
 import android.content.res.Resources;
 import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.DashPathEffect;
 import android.graphics.Paint;
 import android.graphics.Rect;
 import android.graphics.Typeface;
@@ -36,6 +37,7 @@ import android.text.format.Time;
 import android.util.Log;
 import android.view.SurfaceHolder;
 import android.view.WindowInsets;
+
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
@@ -135,6 +137,7 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
         Paint mMinutePaint;
         Paint mCirclePaint;
         Paint mCircleBorderPaint;
+        DashPathEffect mAmbientDashEffect;
         //Paint mSecondPaint;
         //Paint mAmPmPaint;
         Paint mColonPaint;
@@ -148,8 +151,8 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
         String mPmString;
         int mInteractiveBackgroundColor = Color.argb(255, 196, 18, 48);
         int mInteractiveDigitsColor = Color.argb(255,255,255,255);
-        int mInteractiveCircleColor = Color.argb(128,0,0,0);
-        int mInteractiveCircleBorderColor = Color.argb(128,255,255,255);
+        int mInteractiveCircleColor = Color.argb(32,0,0,0);
+        int mInteractiveCircleBorderColor = Color.argb(196,255,255,255);
 
         /**
          * Whether the display supports fewer bits for each color in ambient mode. When true, we
@@ -193,6 +196,9 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
             mCircleBorderPaint.setColor(mInteractiveCircleBorderColor);
             mCircleBorderPaint.setStyle(Paint.Style.STROKE);
             mCircleBorderPaint.setAntiAlias(true);
+            mCircleBorderPaint.setStrokeWidth(2.0f);
+
+            mAmbientDashEffect = new DashPathEffect(new float[]{2.0f,7.0f},0);
 
             mHourPaint = createTextPaint(mInteractiveDigitsColor, BOLD_TYPEFACE);
             mMinutePaint = createTextPaint(mInteractiveDigitsColor);
@@ -311,9 +317,6 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
         @Override
         public void onTimeTick() {
             super.onTimeTick();
-            if (Log.isLoggable(TAG, Log.DEBUG)) {
-                Log.d(TAG, "onTimeTick: ambient = " + isInAmbientMode());
-            }
             invalidate();
         }
 
@@ -329,6 +332,12 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
                     Color.argb(255,0,0,0));
             adjustPaintColorToCurrentMode(mCircleBorderPaint, mInteractiveCircleBorderColor,
                     Color.argb(255,255,255,255));
+
+            if(isInAmbientMode()){
+                mCircleBorderPaint.setPathEffect(mAmbientDashEffect);
+            } else {
+                mCircleBorderPaint.setPathEffect(null);
+            }
 
             if (mLowBitAmbient) {
                 boolean antiAlias = !inAmbientMode;
@@ -408,15 +417,36 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
         @Override
         public void onDraw(Canvas canvas, Rect bounds) {
             mTime.setToNow();
+            long millis = System.currentTimeMillis() % 1000;
 
             // Draw the background.
             canvas.drawRect(0, 0, bounds.width(), bounds.height(), mBackgroundPaint);
 
             // Draw the circle that goes under the time
             float radius = (float)bounds.width()/2;
+            int circleRadius = (int)(radius/2);
             int insetOffset = (int)(radius/(2*1.41421356237));
             canvas.drawCircle(bounds.width()/2 + insetOffset, bounds.height()/2 - insetOffset,
-                    (int)(radius/2),mCirclePaint);
+                    circleRadius,mCirclePaint);
+
+            int left = (bounds.width() / 2 + insetOffset) - circleRadius;
+            int right = left + 2 * circleRadius;
+            int top = (bounds.height() / 2 - insetOffset) - circleRadius;
+            int bot = top + 2 * circleRadius;
+            if(!isInAmbientMode()) {
+                float pctAround = (mTime.second + millis/1000.0f)/60.0f;
+
+                if (mTime.minute % 2 == 0) {
+                    canvas.drawArc(left, top, right, bot, 270,
+                            360*pctAround, false, mCircleBorderPaint);
+                } else {
+                    canvas.drawArc(left, top, right, bot, (270+360*pctAround),
+                            360*(1.0f-pctAround), false, mCircleBorderPaint);
+                }
+            } else {
+                canvas.drawArc(left, top, right, bot, 0,
+                        360, false, mCircleBorderPaint);
+            }
 
             // Draw the hours.
             float x = mXOffset;
@@ -430,6 +460,10 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
             String minuteString = formatTwoDigitNumber(mTime.minute);
             canvas.drawText(minuteString, x, mYOffset, mMinutePaint);
             x += mMinutePaint.measureText(minuteString);
+
+            if (isVisible() && !isInAmbientMode()) {
+                invalidate();
+            }
         }
 
         /**
