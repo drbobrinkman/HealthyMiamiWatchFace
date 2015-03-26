@@ -21,12 +21,11 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.res.Resources;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.DashPathEffect;
 import android.graphics.Paint;
+import android.graphics.Path;
 import android.graphics.Rect;
 import android.graphics.Typeface;
 import android.os.Bundle;
@@ -67,6 +66,11 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
     private Typeface BOLD_TYPEFACE = null;
     private Typeface NORMAL_TYPEFACE = null;
 
+    private static final float WATCH_WIDTH = 320.0f;
+    private static final float CIRCLE_WIDTH = WATCH_WIDTH/2.0f;
+    private static final float WATCH_RADIUS = CIRCLE_WIDTH;
+    private static final float CIRCLE_RADIUS = CIRCLE_WIDTH/2.0f;
+    private static final float CIRCLE_OFFSET = (float) Math.sqrt(CIRCLE_RADIUS*CIRCLE_RADIUS/2.0f);
     /**
      * Update rate in milliseconds for normal (not ambient and not mute) mode.
      * 20 FPS seems to be sufficiently smooth looking
@@ -78,6 +82,10 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
      */
     private static final long MUTE_UPDATE_RATE_MS = TimeUnit.MINUTES.toMillis(1);
 
+    private static final float[][] M_POINTS = { {0.0f,0.0f},
+                                                {217.0f,0.0f},
+                                                {217.0f,164.0f},
+                                                {0.0f,164.0f}} ;
     @Override
     public Engine onCreateEngine() {
         return new Engine();
@@ -141,10 +149,9 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
         Paint mCircleBorderPaint;
         DashPathEffect mAmbientDashEffect;
 
-        Paint mBitmapPaint;
-        Paint mAmbientBitmapPaint;
-        Bitmap mInteractiveMiamiM;
-        Bitmap mAmbientMiamiM;
+        Path mMPath;
+        Paint mMPathPaint;
+        Paint mMFillPaint;
 
         boolean mMute;
         Time mTime;
@@ -153,6 +160,7 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
         int mInteractiveDigitsColor = Color.argb(255,255,255,255);
         int mInteractiveCircleColor = Color.argb(64,0,0,0);
         int mInteractiveCircleBorderColor = Color.argb(196,255,255,255);
+        int mInteractiveMiamiMColor = Color.argb(255,255,255,255);
 
         /**
          * Whether the display supports fewer bits for each color in ambient mode. When true, we
@@ -184,9 +192,6 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
             mBackgroundPaint = new Paint();
             mBackgroundPaint.setColor(mInteractiveBackgroundColor);
 
-            mInteractiveMiamiM = BitmapFactory.decodeResource(getResources(), R.drawable.mkhigh);
-            mAmbientMiamiM = BitmapFactory.decodeResource(getResources(), R.drawable.mklow);
-
             mCirclePaint = new Paint();
             mCirclePaint.setColor(mInteractiveCircleColor);
             mCirclePaint.setStyle(Paint.Style.FILL);
@@ -198,13 +203,33 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
             mCircleBorderPaint.setAntiAlias(true);
             mCircleBorderPaint.setStrokeWidth(2.0f);
 
-            mAmbientDashEffect = new DashPathEffect(new float[]{2.0f,7.0f},0);
-
-            mBitmapPaint = new Paint(Paint.FILTER_BITMAP_FLAG);
-            mAmbientBitmapPaint = mBitmapPaint;
+            mAmbientDashEffect = new DashPathEffect(new float[]{(2.0f),(7.0f)},0);
 
             mHourPaint = createTextPaint(mInteractiveDigitsColor, BOLD_TYPEFACE);
             mMinutePaint = createTextPaint(mInteractiveDigitsColor);
+
+            int centerY = (int)(WATCH_RADIUS-CIRCLE_OFFSET);
+            for(int i=0;i<M_POINTS.length;i++){
+                M_POINTS[i][1] += centerY;
+            }
+            mMPath = new Path();
+            mMPath.moveTo((M_POINTS[0][0]),(M_POINTS[0][1]));
+            for(int i=1;i<M_POINTS.length;i++){
+                mMPath.lineTo((M_POINTS[i][0]),(M_POINTS[i][1]));
+            }
+
+            //Used in ambient mode only
+            mMPathPaint = new Paint();
+            mMPathPaint.setColor(mInteractiveMiamiMColor);
+            mMPathPaint.setStyle(Paint.Style.STROKE);
+            mMPathPaint.setAntiAlias(false);
+            mMPathPaint.setStrokeWidth(2.0f);
+
+            //Used in interactive mode only
+            mMFillPaint = new Paint();
+            mMFillPaint.setColor(mInteractiveMiamiMColor);
+            mMFillPaint.setStyle(Paint.Style.FILL);
+            mMFillPaint.setAntiAlias(true);
 
             mTime = new Time();
         }
@@ -402,38 +427,27 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
         public void onDraw(Canvas canvas, Rect bounds) {
             mTime.setToNow();
             long millis = System.currentTimeMillis() % 1000;
-
             // Draw the background.
             canvas.drawRect(0, 0, bounds.width(), bounds.height(), mBackgroundPaint);
 
-            float radius = (float)bounds.width()/2;
-            int circleRadius = (int)(radius/2);
-            int insetOffset = (int)(radius/(2*1.41421356237));
-            int centerX = (bounds.width()/2 + insetOffset);
-            int centerY = (bounds.height()/2 - insetOffset);
-            int left = centerX - circleRadius;
-            int right = left + 2 * circleRadius;
-            int top = centerY - circleRadius;
-            int bot = top + 2 * circleRadius;
+            int centerX = (int)(WATCH_RADIUS + CIRCLE_OFFSET);
+            int centerY = (int)(WATCH_RADIUS - CIRCLE_OFFSET);
 
-            int MWidth = mInteractiveMiamiM.getWidth();
-            int goalMWidth = centerX;
-            float ratio = goalMWidth/(float)MWidth;
+            int left = (int)(centerX - (CIRCLE_RADIUS));
+            int right = (int)(left + (2 * CIRCLE_RADIUS));
+            int top = (int)(centerY - (CIRCLE_RADIUS));
+            int bot = (int)(top + (2 * CIRCLE_RADIUS));
 
             if(!isInAmbientMode()) {
-                canvas.drawBitmap(mInteractiveMiamiM, null,
-                        new Rect(0,centerY,centerX,centerY+(int)(mInteractiveMiamiM.getHeight()*ratio)),
-                        mBitmapPaint);
+                canvas.drawPath(mMPath,mMFillPaint);
             } else {
-                canvas.drawBitmap(mAmbientMiamiM, null,
-                        new Rect(0,centerY,centerX,centerY+(int)(mAmbientMiamiM.getHeight()*ratio)),
-                        mAmbientBitmapPaint);
+                canvas.drawPath(mMPath,mMPathPaint);
             }
 
             // Draw the circle that goes under the time
 
-            canvas.drawCircle(bounds.width()/2 + insetOffset, bounds.height()/2 - insetOffset,
-                    circleRadius,mCirclePaint);
+            canvas.drawCircle(centerX, centerY,
+                    (CIRCLE_RADIUS),mCirclePaint);
 
 
             if(!isInAmbientMode()) {
