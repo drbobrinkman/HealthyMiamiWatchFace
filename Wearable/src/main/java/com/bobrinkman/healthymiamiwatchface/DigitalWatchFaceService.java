@@ -82,10 +82,33 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
      */
     private static final long MUTE_UPDATE_RATE_MS = TimeUnit.MINUTES.toMillis(1);
 
-    private static final float[][] M_POINTS = { {0.0f,0.0f},
-                                                {217.0f,0.0f},
-                                                {217.0f,164.0f},
-                                                {0.0f,164.0f}} ;
+    private static final float[][] M_POINTS =
+            {
+                    {0.0f,163.8f},
+                    {24.6f,122.8f},
+                    {29.2f,122.8f},
+                    {29.2f,41.0f},
+                    {24.8f,41.0f},
+                    {0.0f,0.0f},
+                    {72.8f,0.0f},
+                    {108.5f,61.2f},
+                    {144.1f,0.0f},
+                    {217.0f,0.0f},
+                    {191.8f,41.0f},
+                    {187.5f,41.0f},
+                    {187.5f,122.8f},
+                    {192.0f,122.8f},
+                    {217.0f,163.8f},
+                    {110.0f,163.8f},
+                    {134.7f,122.8f},
+                    {139.1f,122.8f},
+                    {139.1f,97.0f},
+                    {108.5f,149.1f},
+                    {77.4f,96.5f},
+                    {77.4f,122.8f},
+                    {81.9f,122.8f},
+                    {106.5f,163.8f}
+            } ;
     @Override
     public Engine onCreateEngine() {
         return new Engine();
@@ -217,6 +240,7 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
             for(int i=1;i<M_POINTS.length;i++){
                 mMPath.lineTo((M_POINTS[i][0]),(M_POINTS[i][1]));
             }
+            mMPath.close();
 
             //Used in ambient mode only
             mMPathPaint = new Paint();
