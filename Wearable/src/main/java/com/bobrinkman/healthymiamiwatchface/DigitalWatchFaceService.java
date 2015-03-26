@@ -28,8 +28,13 @@ import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.RadialGradient;
 import android.graphics.Rect;
+import android.graphics.RectF;
 import android.graphics.Shader;
 import android.graphics.Typeface;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
@@ -41,15 +46,8 @@ import android.util.Log;
 import android.view.SurfaceHolder;
 import android.view.WindowInsets;
 
-
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
-import com.google.android.gms.wearable.DataApi;
-import com.google.android.gms.wearable.DataEvent;
-import com.google.android.gms.wearable.DataEventBuffer;
-import com.google.android.gms.wearable.DataItem;
-import com.google.android.gms.wearable.DataMap;
-import com.google.android.gms.wearable.DataMapItem;
 import com.google.android.gms.wearable.Wearable;
 
 import java.util.TimeZone;
@@ -63,7 +61,7 @@ import java.util.concurrent.TimeUnit;
  * and without seconds in mute mode.
  */
 public class DigitalWatchFaceService extends CanvasWatchFaceService {
-    private static final String TAG = "DigitalWatchFaceService";
+    private static final String TAG = "MiamiWatchFaceSrv";
 
     private Typeface BOLD_TYPEFACE = null;
     private Typeface NORMAL_TYPEFACE = null;
@@ -148,8 +146,7 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
     }
 
     private class Engine extends CanvasWatchFaceService.Engine implements /*DataApi.DataListener,*/
-            GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener {
-        static final String COLON_STRING = ":";
+            GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener, SensorEventListener {
 
         /** Alpha value for drawing time when in mute mode. */
         static final int MUTE_ALPHA = 100;
@@ -202,6 +199,7 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
         Paint mInteractiveBackgroundPaint;
         Paint mHourPaint;
         Paint mMinutePaint;
+        Paint mStepPaint;
         Paint mCirclePaint;
         Paint mCircleBorderPaint;
         DashPathEffect mAmbientDashEffect;
@@ -219,6 +217,11 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
         int mInteractiveCircleColor = Color.argb(64,0,0,0);
         int mInteractiveCircleBorderColor = Color.argb(196,255,255,255);
         int mInteractiveMiamiMColor = Color.argb(255,255,255,255);
+
+        SensorManager mSensorManager = null;
+        int mStepCount = 0;
+        int mMidnightStepCount = 0;
+        int mCurDay = -1;
 
         /**
          * Whether the display supports fewer bits for each color in ambient mode. When true, we
@@ -270,6 +273,7 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
 
             mHourPaint = createTextPaint(mInteractiveDigitsColor, BOLD_TYPEFACE);
             mMinutePaint = createTextPaint(mInteractiveDigitsColor);
+            mStepPaint  = createTextPaint(mInteractiveDigitsColor);
 
             mMPath = new Path();
             mMPath.moveTo((M_POINTS[0][0]),(M_POINTS[0][1]));
@@ -293,6 +297,14 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
             mMFillPaint.setAntiAlias(true);
 
             mTime = new Time();
+
+            mSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
+            if(mSensorManager != null) {
+                Sensor countSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_STEP_COUNTER);
+                if (countSensor != null) {
+                    mSensorManager.registerListener(this,countSensor,SensorManager.SENSOR_DELAY_NORMAL);
+                }
+            }
         }
 
         @Override
@@ -369,12 +381,12 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
 
             // Load resources that have alternate values for round watches.
             Resources resources = DigitalWatchFaceService.this.getResources();
-            boolean isRound = insets.isRound();
 
             float textSize = resources.getDimension(R.dimen.digital_text_size_round);
 
             mHourPaint.setTextSize(textSize);
             mMinutePaint.setTextSize(textSize/2);
+            mStepPaint.setTextSize(textSize/4);
         }
 
         @Override
@@ -420,6 +432,7 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
                 boolean antiAlias = !inAmbientMode;
                 mHourPaint.setAntiAlias(antiAlias);
                 mMinutePaint.setAntiAlias(antiAlias);
+                mStepPaint.setAntiAlias(antiAlias);
                 mCirclePaint.setAntiAlias(antiAlias);
                 mCircleBorderPaint.setAntiAlias(antiAlias);
             }
@@ -451,6 +464,7 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
                 int alpha = inMuteMode ? MUTE_ALPHA : NORMAL_ALPHA;
                 mHourPaint.setAlpha(alpha);
                 mMinutePaint.setAlpha(alpha);
+                mStepPaint.setAlpha(alpha);
                 invalidate();
             }
         }
@@ -510,10 +524,8 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
             mMPath.offset(217.0f-centerX,-centerY);
 
             // Draw the circle that goes under the time
-
             canvas.drawCircle(centerX, centerY,
                     (CIRCLE_RADIUS),mCirclePaint);
-
 
             if(!isInAmbientMode()) {
                 float pctAround = (mTime.second + millis/1000.0f)/60.0f;
@@ -544,6 +556,24 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
             canvas.drawText(minuteString, centerX,
                     centerY+(totalHeight/2), mMinutePaint);
 
+            //Draw the steps
+            String stepString = String.valueOf(mStepCount - mMidnightStepCount);
+            //Draw the background rectangle
+            Rect bgbounds = new Rect();
+            mStepPaint.getTextBounds(stepString,0,stepString.length(),bgbounds);
+            int origWidth = bgbounds.width();
+            bgbounds.inset(-4-bgbounds.height()/2,-4);
+            bgbounds.offset(centerX-origWidth/2-1,centerY+(int)(0.75*CIRCLE_WIDTH));
+
+            canvas.drawRoundRect(new RectF(bgbounds),
+                    bgbounds.height()/2,bgbounds.height()/2,
+                    mCirclePaint);
+            if(isInAmbientMode()) {
+                canvas.drawRoundRect(new RectF(bgbounds),
+                        bgbounds.height() / 2, bgbounds.height() / 2,
+                        mCircleBorderPaint);
+            }
+            canvas.drawText(stepString, centerX, centerY+(int)(0.75*CIRCLE_WIDTH),mStepPaint);
         }
 
         /**
@@ -690,6 +720,20 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
             if (Log.isLoggable(TAG, Log.DEBUG)) {
                 Log.d(TAG, "onConnectionFailed: " + result);
             }
+        }
+
+        @Override
+        public void onSensorChanged(SensorEvent event) {
+            mStepCount = (int)event.values[0];
+            if(mTime.monthDay != mCurDay){
+                mCurDay = mTime.monthDay;
+                mMidnightStepCount = mStepCount;
+            }
+        }
+
+        @Override
+        public void onAccuracyChanged(Sensor sensor, int accuracy) {
+            //Do nothing
         }
     }
 }
