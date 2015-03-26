@@ -240,10 +240,6 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
             mHourPaint = createTextPaint(mInteractiveDigitsColor, BOLD_TYPEFACE);
             mMinutePaint = createTextPaint(mInteractiveDigitsColor);
 
-            int centerY = (int)(WATCH_RADIUS-CIRCLE_OFFSET);
-            for(int i=0;i<M_POINTS.length;i++){
-                M_POINTS[i][1] += centerY;
-            }
             mMPath = new Path();
             mMPath.moveTo((M_POINTS[0][0]),(M_POINTS[0][1]));
             for(int i=1;i<M_POINTS.length;i++){
@@ -465,19 +461,22 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
                 canvas.drawRect(0, 0, bounds.width(), bounds.height(), mInteractiveBackgroundPaint);
             }
 
-            int centerX = (int)(WATCH_RADIUS + CIRCLE_OFFSET);
-            int centerY = (int)(WATCH_RADIUS - CIRCLE_OFFSET);
+            int centerX = (int)(bounds.width()/2 + CIRCLE_OFFSET);
+            int centerY = (int)(bounds.height()/2 - CIRCLE_OFFSET);
 
             int left = (int)(centerX - (CIRCLE_RADIUS));
             int right = (int)(left + (2 * CIRCLE_RADIUS));
             int top = (int)(centerY - (CIRCLE_RADIUS));
             int bot = (int)(top + (2 * CIRCLE_RADIUS));
 
+            //Want upper-right corner of path to line up with centerX, centerY
+            mMPath.offset(-217.0f+centerX,centerY);
             if(!isInAmbientMode()) {
                 canvas.drawPath(mMPath,mMFillPaint);
             } else {
                 canvas.drawPath(mMPath,mMPathPaint);
             }
+            mMPath.offset(217.0f-centerX,-centerY);
 
             // Draw the circle that goes under the time
 
