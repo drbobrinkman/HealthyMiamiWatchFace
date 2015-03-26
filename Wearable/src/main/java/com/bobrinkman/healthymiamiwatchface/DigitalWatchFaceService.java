@@ -561,6 +561,7 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
             //Draw the steps
             String stepString = String.valueOf(mLastStepCount - mMidnightStepCount);
             //Draw the background rectangle
+            //TODO: All the layout here is voodoo programming. Fix it!
             Rect bgbounds = new Rect();
             mStepPaint.getTextBounds(stepString,0,stepString.length(),bgbounds);
             int origWidth = bgbounds.width();
@@ -726,20 +727,34 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
 
         @Override
         public void onSensorChanged(SensorEvent event) {
-            //TODO: What if stepCount is less than mMidnightStepCount? Probably
-            // indicates reboot.
-            mLastStepCount = (int)event.values[0];
+            //curStepCount is steps since system reboot
+            int curStepCount = (int)event.values[0];
+            int todayIs = mTime.year*10000 + mTime.month*100 + mTime.monthDay;
+
+            if(curStepCount < mLastStepCount && todayIs == mCurDay){
+                //Either a time warp ... or likely a reboot.
+                //If this was a reboot, then we want to save the amount of steps
+                // we had, by setting the mMidnightStepCount to an appropriate
+                // negative number
+                SharedPreferences.Editor editorMidnight = mSettings.edit();
+                mMidnightStepCount = -(mLastStepCount - mMidnightStepCount);
+                editorMidnight.putInt("MidnightStepCount",mMidnightStepCount);
+                mLastStepCount = 0;
+                editorMidnight.putInt("LastStepCount",mLastStepCount);
+                editorMidnight.commit();
+            }
 
             SharedPreferences.Editor editor = mSettings.edit();
+            mLastStepCount = curStepCount;
             editor.putInt("LastStepCount",mLastStepCount);
 
-            int todayIs = mTime.year*10000 + mTime.month*100 + mTime.monthDay;
             if(todayIs != mCurDay){
                 mCurDay = todayIs;
                 mMidnightStepCount = mLastStepCount;
                 editor.putInt("MidnightStepCount",mMidnightStepCount);
                 editor.putInt("CurDay",mCurDay);
             }
+
             editor.commit();
         }
 
