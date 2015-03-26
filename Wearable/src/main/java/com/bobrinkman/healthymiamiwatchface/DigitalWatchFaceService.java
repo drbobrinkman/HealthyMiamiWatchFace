@@ -26,7 +26,9 @@ import android.graphics.Color;
 import android.graphics.DashPathEffect;
 import android.graphics.Paint;
 import android.graphics.Path;
+import android.graphics.RadialGradient;
 import android.graphics.Rect;
+import android.graphics.Shader;
 import android.graphics.Typeface;
 import android.os.Bundle;
 import android.os.Handler;
@@ -165,7 +167,8 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
         };
         boolean mRegisteredTimeZoneReceiver = false;
 
-        Paint mBackgroundPaint;
+        Paint mAmbientBackgroundPaint;
+        Paint mInteractiveBackgroundPaint;
         Paint mHourPaint;
         Paint mMinutePaint;
         Paint mCirclePaint;
@@ -180,6 +183,7 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
         Time mTime;
 
         int mInteractiveBackgroundColor = Color.argb(255, 196, 18, 48);
+        int mInteractiveBackgroundColor2 = Color.argb(128, 196, 18, 48);
         int mInteractiveDigitsColor = Color.argb(255,255,255,255);
         int mInteractiveCircleColor = Color.argb(64,0,0,0);
         int mInteractiveCircleBorderColor = Color.argb(196,255,255,255);
@@ -212,8 +216,13 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
                     .build());
             Resources resources = DigitalWatchFaceService.this.getResources();
 
-            mBackgroundPaint = new Paint();
-            mBackgroundPaint.setColor(mInteractiveBackgroundColor);
+            mAmbientBackgroundPaint = new Paint();
+            mAmbientBackgroundPaint.setColor(Color.argb(255,0,0,0));
+            mInteractiveBackgroundPaint = new Paint();
+            mInteractiveBackgroundPaint.setShader(new RadialGradient(WATCH_RADIUS,WATCH_RADIUS,
+                    WATCH_RADIUS,
+                    mInteractiveBackgroundColor,mInteractiveBackgroundColor2,
+                    Shader.TileMode.CLAMP));
 
             mCirclePaint = new Paint();
             mCirclePaint.setColor(mInteractiveCircleColor);
@@ -368,8 +377,7 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
             if (Log.isLoggable(TAG, Log.DEBUG)) {
                 Log.d(TAG, "onAmbientModeChanged: " + inAmbientMode);
             }
-            adjustPaintColorToCurrentMode(mBackgroundPaint, mInteractiveBackgroundColor,
-                    Color.argb(255,0,0,0));
+
             adjustPaintColorToCurrentMode(mCirclePaint, mInteractiveCircleColor,
                     Color.argb(255,0,0,0));
             adjustPaintColorToCurrentMode(mCircleBorderPaint, mInteractiveCircleBorderColor,
@@ -452,7 +460,10 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
             mTime.setToNow();
             long millis = System.currentTimeMillis() % 1000;
             // Draw the background.
-            canvas.drawRect(0, 0, bounds.width(), bounds.height(), mBackgroundPaint);
+            canvas.drawRect(0, 0, bounds.width(), bounds.height(), mAmbientBackgroundPaint);
+            if(!isInAmbientMode()){
+                canvas.drawRect(0, 0, bounds.width(), bounds.height(), mInteractiveBackgroundPaint);
+            }
 
             int centerX = (int)(WATCH_RADIUS + CIRCLE_OFFSET);
             int centerY = (int)(WATCH_RADIUS - CIRCLE_OFFSET);
