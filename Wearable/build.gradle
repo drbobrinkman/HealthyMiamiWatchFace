@@ -4,7 +4,7 @@ buildscript {
     }
 
     dependencies {
-        classpath 'com.android.tools.build:gradle:1.0.0'
+        classpath 'com.android.tools.build:gradle:1.1.0'
     }
 }
 
@@ -15,9 +15,10 @@ apply plugin: 'com.android.application'
 dependencies {
 
 
-    compile 'com.google.android.gms:play-services-wearable:6.5.+'
-    compile 'com.android.support:support-v13:21.0.+'
-    compile 'com.google.android.support:wearable:1.1.+'
+    compile 'com.google.android.gms:play-services-wearable:7.0.0'
+    //compile 'com.google.android.gms:play-services-fitness:7.0.0'
+    compile 'com.android.support:support-v13:21.0.0'
+    compile 'com.google.android.support:wearable:1.1.0'
 }
 
 // The sample build uses multiple directories to
@@ -31,7 +32,7 @@ List<String> dirs = [
 android {
     compileSdkVersion 21
 
-    buildToolsVersion "21.1.1"
+    buildToolsVersion "21.1.2"
 
     defaultConfig {
         versionCode 1
