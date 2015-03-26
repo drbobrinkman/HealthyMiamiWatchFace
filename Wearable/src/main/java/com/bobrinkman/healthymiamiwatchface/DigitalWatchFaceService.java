@@ -160,6 +160,7 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
         long mInteractiveUpdateRateMs = NORMAL_UPDATE_RATE_MS;
 
         /** Handler to update the time periodically in interactive mode. */
+    //TODO: Figure out how this ought to be handled
         final Handler mUpdateTimeHandler = new Handler() {
             @Override
             public void handleMessage(Message message) {
@@ -248,7 +249,6 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
                     .setBackgroundVisibility(WatchFaceStyle.BACKGROUND_VISIBILITY_INTERRUPTIVE)
                     .setShowSystemUiTime(false)
                     .build());
-            Resources resources = DigitalWatchFaceService.this.getResources();
 
             mAmbientBackgroundPaint = new Paint();
             mAmbientBackgroundPaint.setColor(Color.argb(255,0,0,0));
@@ -478,12 +478,6 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
             // Stop and restart the timer so the new update rate takes effect immediately.
             if (shouldTimerBeRunning()) {
                 updateTimer();
-            }
-        }
-
-        private void updatePaintIfInteractive(Paint paint, int interactiveColor) {
-            if (!isInAmbientMode() && paint != null) {
-                paint.setColor(interactiveColor);
             }
         }
 
