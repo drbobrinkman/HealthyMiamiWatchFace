@@ -20,6 +20,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.SharedPreferences;
 import android.content.res.Resources;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -220,8 +221,8 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
         int mInteractiveMiamiMColor = Color.argb(255,255,255,255);
 
         SensorManager mSensorManager = null;
-        int mStepCount = 0;
         int mMidnightStepCount = 0;
+        int mLastStepCount = 0;
         int mCurDay = -1;
 
         /**
@@ -229,6 +230,8 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
          * disable anti-aliasing in ambient mode.
          */
         boolean mLowBitAmbient;
+
+        SharedPreferences mSettings;
 
         @Override
         public void onCreate(SurfaceHolder holder) {
@@ -305,6 +308,11 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
                     mSensorManager.registerListener(this,countSensor,SensorManager.SENSOR_DELAY_NORMAL);
                 }
             }
+
+            mSettings = getSharedPreferences("HealthyMiamiWatchFace", MODE_PRIVATE);
+            mMidnightStepCount = mSettings.getInt("MidnightStepCount",0);
+            mCurDay = mSettings.getInt("CurDay",0);
+            mLastStepCount = mSettings.getInt("LastStepCount",0);
         }
 
         @Override
@@ -551,7 +559,7 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
                     centerY+(totalHeight/2), mMinutePaint);
 
             //Draw the steps
-            String stepString = String.valueOf(mStepCount - mMidnightStepCount);
+            String stepString = String.valueOf(mLastStepCount - mMidnightStepCount);
             //Draw the background rectangle
             Rect bgbounds = new Rect();
             mStepPaint.getTextBounds(stepString,0,stepString.length(),bgbounds);
@@ -718,11 +726,21 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
 
         @Override
         public void onSensorChanged(SensorEvent event) {
-            mStepCount = (int)event.values[0];
-            if(mTime.monthDay != mCurDay){
-                mCurDay = mTime.monthDay;
-                mMidnightStepCount = mStepCount;
+            //TODO: What if stepCount is less than mMidnightStepCount? Probably
+            // indicates reboot.
+            mLastStepCount = (int)event.values[0];
+
+            SharedPreferences.Editor editor = mSettings.edit();
+            editor.putInt("LastStepCount",mLastStepCount);
+
+            int todayIs = mTime.year*10000 + mTime.month*100 + mTime.monthDay;
+            if(todayIs != mCurDay){
+                mCurDay = todayIs;
+                mMidnightStepCount = mLastStepCount;
+                editor.putInt("MidnightStepCount",mMidnightStepCount);
+                editor.putInt("CurDay",mCurDay);
             }
+            editor.commit();
         }
 
         @Override
