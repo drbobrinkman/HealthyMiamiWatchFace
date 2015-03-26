@@ -86,6 +86,7 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
 
     private static final float[][] M_POINTS =
             {
+                    //Outer perimeter
                     {0.0f,163.8f},
                     {24.6f,122.8f},
                     {29.2f,122.8f},
@@ -109,7 +110,37 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
                     {77.4f,96.5f},
                     {77.4f,122.8f},
                     {81.9f,122.8f},
-                    {106.5f,163.8f}
+                    {106.5f,163.8f},
+
+                    //Repeat first point of outer perimenter
+                    {0.0f,163.8f},
+
+                    //Inner perimeter
+                    {20.3f, 155.2f},
+                    {31.4f, 133.9f},
+                    {40.5f, 133.9f},
+                    {40.5f, 29.4f},
+                    {31.4f, 29.4f},
+                    {20.5f, 11.1f},
+                    {65.9f, 11.1f},
+                    {108.5f, 83.7f},
+                    {151.3f, 11.1f},
+                    {196.5f, 11.1f},
+                    {185.6f, 29.4f},
+                    {176.5f, 29.4f},
+                    {176.5f, 133.9f},
+                    {185.7f, 133.9f},
+                    {196.5f, 155.2f},
+                    {130.4f, 155.2f},
+                    {141.5f, 133.9f},
+                    {150.8f, 133.9f},
+                    {150.8f, 54.3f},
+                    {108.5f, 126.3f},
+                    {66.4f, 54.3f},
+                    {66.4f, 133.9f},
+                    {75.4f, 133.9f},
+                    {86.6f, 155.2f},
+                    {20.3f, 155.2f}
             } ;
     @Override
     public Engine onCreateEngine() {
@@ -246,6 +277,7 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
                 mMPath.lineTo((M_POINTS[i][0]),(M_POINTS[i][1]));
             }
             mMPath.close();
+            mMPath.setFillType(Path.FillType.EVEN_ODD);
 
             //Used in ambient mode only
             mMPathPaint = new Paint();
@@ -339,8 +371,7 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
             Resources resources = DigitalWatchFaceService.this.getResources();
             boolean isRound = insets.isRound();
 
-            float textSize = resources.getDimension(isRound
-                    ? R.dimen.digital_text_size_round : R.dimen.digital_text_size);
+            float textSize = resources.getDimension(R.dimen.digital_text_size_round);
 
             mHourPaint.setTextSize(textSize);
             mMinutePaint.setTextSize(textSize/2);
