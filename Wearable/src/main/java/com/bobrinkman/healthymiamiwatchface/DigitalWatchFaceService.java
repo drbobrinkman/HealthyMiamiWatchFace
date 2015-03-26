@@ -16,6 +16,7 @@
 
 package com.bobrinkman.healthymiamiwatchface;
 
+import android.annotation.SuppressLint;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -291,7 +292,7 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
             mMPathPaint.setColor(mInteractiveMiamiMColor);
             mMPathPaint.setStyle(Paint.Style.STROKE);
             mMPathPaint.setAntiAlias(false);
-            mMPathPaint.setStrokeWidth(2.0f);
+            mMPathPaint.setStrokeWidth(1.0f);
 
             //Used in interactive mode only
             mMFillPaint = new Paint();
@@ -725,6 +726,7 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
             }
         }
 
+        @SuppressLint("CommitPrefEdits")
         @Override
         public void onSensorChanged(SensorEvent event) {
             //curStepCount is steps since system reboot
