@@ -462,24 +462,24 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
             // both the center of the view and (in a circular watch), the
             // edge of the view. It is at a 45 degree angle up and right
             // of the center of the view
-            int centerX = (int)(bounds.width()/2 + CIRCLE_OFFSET);
-            int centerY = (int)(bounds.height()/2 - CIRCLE_OFFSET);
+            int timeCenterX = (int)(bounds.width()/2 + CIRCLE_OFFSET);
+            int timeCenterY = (int)(bounds.height()/2 - CIRCLE_OFFSET);
 
-            int circleLeft = (int)(centerX - (CIRCLE_RADIUS));
+            int circleLeft = (int)(timeCenterX - (CIRCLE_RADIUS));
             int circleRight = (int)(circleLeft + (2 * CIRCLE_RADIUS));
-            int circleTop = (int)(centerY - (CIRCLE_RADIUS));
+            int circleTop = (int)(timeCenterY - (CIRCLE_RADIUS));
             int circleBot = (int)(circleTop + (2 * CIRCLE_RADIUS));
 
             //Want upper-right corner of path to line up with centerX, centerY
-            mMPath.offset(-217.0f+centerX,centerY);
+            mMPath.offset(-217.0f+timeCenterX,timeCenterY);
             canvas.drawPath(mMPath,mMFillPaint);
             if(isInAmbientMode()) {
                 canvas.drawPath(mMPath,mMPathPaint);
             }
-            mMPath.offset(217.0f-centerX,-centerY);
+            mMPath.offset(217.0f-timeCenterX,-timeCenterY);
 
             // Draw the circle that goes under the time
-            canvas.drawCircle(centerX, centerY,
+            canvas.drawCircle(timeCenterX, timeCenterY,
                     (CIRCLE_RADIUS),mTopLayerBackgroundPaint);
 
             if(!isInAmbientMode()) {
@@ -500,25 +500,23 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
             String hourString = String.valueOf(convertTo12Hour(mTime.hour));
             String minuteString = formatTwoDigitNumber(mTime.minute);
 
-            Rect bgbounds = new Rect();
-            mHourPaint.getTextBounds(hourString,0,hourString.length(),bgbounds);
-            float hourHeight = bgbounds.height();
-            mMinutePaint.getTextBounds(minuteString,0,minuteString.length(),bgbounds);
-            float minuteHeight = bgbounds.height();
+            Rect textBounds = new Rect();
+            mHourPaint.getTextBounds(hourString,0,hourString.length(),textBounds);
+            float hourHeight = textBounds.height();
+            mMinutePaint.getTextBounds(minuteString,0,minuteString.length(),textBounds);
+            float minuteHeight = textBounds.height();
             float totalHeight = hourHeight + PADDING + minuteHeight;
 
-            canvas.drawText(hourString, centerX, centerY + (hourHeight-(totalHeight/2)), mHourPaint);
-            canvas.drawText(minuteString, centerX,
-                    centerY+(totalHeight/2), mMinutePaint);
+            canvas.drawText(hourString, timeCenterX, timeCenterY + (hourHeight-(totalHeight/2)), mHourPaint);
+            canvas.drawText(minuteString, timeCenterX,
+                    timeCenterY+(totalHeight/2), mMinutePaint);
 
-            //Draw the steps
             String stepString = String.valueOf(mLastStepCount - mMidnightStepCount);
-            //Draw the background rectangle
-            mStepPaint.getTextBounds(stepString,0,stepString.length(),bgbounds);
+            mStepPaint.getTextBounds(stepString,0,stepString.length(),textBounds);
 
-            int textWidth = bgbounds.width();
-            int textHeight = bgbounds.height();
-            int centerY2 = centerY + (int)(0.75*CIRCLE_WIDTH);
+            int textWidth = textBounds.width();
+            int textHeight = textBounds.height();
+            int stepCenterY = timeCenterY + (int)(0.75*CIRCLE_WIDTH);
             int contentWidth = textWidth + mFootsteps.getWidth();
             int roomForRounded = textHeight+2*PADDING;
             int fullWidth = contentWidth + roomForRounded;
@@ -526,26 +524,26 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
             int radius = roomForRounded/2;
 
             canvas.drawRoundRect(
-                    centerX - fullWidth/2,
-                    centerY2 - fullHeight/2,
-                    centerX + fullWidth/2,
-                    centerY2 + fullHeight/2,
+                    timeCenterX - fullWidth/2,
+                    stepCenterY - fullHeight/2,
+                    timeCenterX + fullWidth/2,
+                    stepCenterY + fullHeight/2,
                     radius, radius,
                     mTopLayerBackgroundPaint);
 
             if(isInAmbientMode()) {
                 canvas.drawRoundRect(
-                        centerX - fullWidth/2,
-                        centerY2 - fullHeight/2,
-                        centerX + fullWidth/2,
-                        centerY2 + fullHeight/2,
+                        timeCenterX - fullWidth/2,
+                        stepCenterY - fullHeight/2,
+                        timeCenterX + fullWidth/2,
+                        stepCenterY + fullHeight/2,
                         radius, radius,
                         mTopLayerBorderPaint);
             }
-            canvas.drawText(stepString, centerX+mFootsteps.getWidth()/2,
-                    centerY2+textHeight/2,mStepPaint);
-            canvas.drawBitmap(mFootsteps, centerX - contentWidth / 2 - mFootsteps.getWidth() / 2,
-                    centerY2 - mFootsteps.getHeight() / 2, null);
+            canvas.drawText(stepString, timeCenterX+mFootsteps.getWidth()/2,
+                    stepCenterY+textHeight/2,mStepPaint);
+            canvas.drawBitmap(mFootsteps, timeCenterX - contentWidth / 2 - mFootsteps.getWidth() / 2,
+                    stepCenterY - mFootsteps.getHeight() / 2, null);
 
         }
 
