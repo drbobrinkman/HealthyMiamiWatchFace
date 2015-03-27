@@ -23,6 +23,8 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.res.Resources;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.DashPathEffect;
@@ -30,7 +32,6 @@ import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.RadialGradient;
 import android.graphics.Rect;
-import android.graphics.RectF;
 import android.graphics.Shader;
 import android.graphics.Typeface;
 import android.hardware.Sensor;
@@ -73,6 +74,7 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
     private static final float WATCH_RADIUS = CIRCLE_WIDTH;
     private static final float CIRCLE_RADIUS = CIRCLE_WIDTH/2.0f;
     private static final float CIRCLE_OFFSET = (float) Math.sqrt(CIRCLE_RADIUS*CIRCLE_RADIUS/2.0f);
+    private static final float FONT_SIZE_LARGE = 90.0f;
     /**
      * Update rate in milliseconds for normal (not ambient and not mute) mode.
      * 20 FPS seems to be sufficiently smooth looking
@@ -226,6 +228,8 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
         int mLastStepCount = 0;
         int mCurDay = -1;
 
+        Bitmap mFootsteps;
+
         /**
          * Whether the display supports fewer bits for each color in ambient mode. When true, we
          * disable anti-aliasing in ambient mode.
@@ -271,9 +275,9 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
             mCircleBorderPaint.setColor(mInteractiveCircleBorderColor);
             mCircleBorderPaint.setStyle(Paint.Style.STROKE);
             mCircleBorderPaint.setAntiAlias(true);
-            mCircleBorderPaint.setStrokeWidth(2.0f);
+            mCircleBorderPaint.setStrokeWidth(3.0f);
 
-            mAmbientDashEffect = new DashPathEffect(new float[]{(2.0f),(7.0f)},0);
+            mAmbientDashEffect = new DashPathEffect(new float[]{(1.0f),(3.0f)},0);
 
             mHourPaint = createTextPaint(mInteractiveDigitsColor, BOLD_TYPEFACE);
             mMinutePaint = createTextPaint(mInteractiveDigitsColor);
@@ -314,6 +318,10 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
             mMidnightStepCount = mSettings.getInt("MidnightStepCount",0);
             mCurDay = mSettings.getInt("CurDay",0);
             mLastStepCount = mSettings.getInt("LastStepCount",0);
+
+            // Load resources that have alternate values for round watches.
+            Resources resources = DigitalWatchFaceService.this.getResources();
+            mFootsteps = BitmapFactory.decodeResource(resources,R.drawable.footprints);
         }
 
         @Override
@@ -388,10 +396,7 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
             }
             super.onApplyWindowInsets(insets);
 
-            // Load resources that have alternate values for round watches.
-            Resources resources = DigitalWatchFaceService.this.getResources();
-
-            float textSize = resources.getDimension(R.dimen.digital_text_size_round);
+            float textSize = FONT_SIZE_LARGE;
 
             mHourPaint.setTextSize(textSize);
             mMinutePaint.setTextSize(textSize/2);
@@ -433,8 +438,10 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
 
             if(isInAmbientMode()){
                 mCircleBorderPaint.setPathEffect(mAmbientDashEffect);
+                mCircleBorderPaint.setStrokeWidth(1.0f);
             } else {
                 mCircleBorderPaint.setPathEffect(null);
+                mCircleBorderPaint.setStrokeWidth(3.0f);
             }
 
             if (mLowBitAmbient) {
@@ -562,22 +569,42 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
             //Draw the steps
             String stepString = String.valueOf(mLastStepCount - mMidnightStepCount);
             //Draw the background rectangle
-            //TODO: All the layout here is voodoo programming. Fix it!
             Rect bgbounds = new Rect();
             mStepPaint.getTextBounds(stepString,0,stepString.length(),bgbounds);
-            int origWidth = bgbounds.width();
-            bgbounds.inset(-4-bgbounds.height()/2,-4);
-            bgbounds.offset(centerX-origWidth/2-1,centerY+(int)(0.75*CIRCLE_WIDTH));
 
-            canvas.drawRoundRect(new RectF(bgbounds),
-                    bgbounds.height()/2,bgbounds.height()/2,
+            int textWidth = bgbounds.width();
+            int textHeight = bgbounds.height();
+            //int centerX2 = centerX;
+            int centerY2 = centerY + (int)(0.75*CIRCLE_WIDTH);
+            int contentWidth = textWidth + mFootsteps.getWidth();
+            int padding = 12;
+            int roomForRounded = textHeight+2*padding;
+            int fullWidth = contentWidth + roomForRounded;
+            int fullHeight = textHeight + 2*padding;
+            int radius = roomForRounded/2;
+
+            canvas.drawRoundRect(
+                    centerX - fullWidth/2,
+                    centerY2 - fullHeight/2,
+                    centerX + fullWidth/2,
+                    centerY2 + fullHeight/2,
+                    radius, radius,
                     mCirclePaint);
+
             if(isInAmbientMode()) {
-                canvas.drawRoundRect(new RectF(bgbounds),
-                        bgbounds.height() / 2, bgbounds.height() / 2,
+                canvas.drawRoundRect(
+                        centerX - fullWidth/2,
+                        centerY2 - fullHeight/2,
+                        centerX + fullWidth/2,
+                        centerY2 + fullHeight/2,
+                        radius, radius,
                         mCircleBorderPaint);
             }
-            canvas.drawText(stepString, centerX, centerY+(int)(0.75*CIRCLE_WIDTH),mStepPaint);
+            canvas.drawText(stepString, centerX+mFootsteps.getWidth()/2,
+                    centerY2+textHeight/2,mStepPaint);
+            canvas.drawBitmap(mFootsteps, centerX - contentWidth / 2 - mFootsteps.getWidth() / 2,
+                    centerY2 - mFootsteps.getHeight() / 2, null);
+
         }
 
         /**
