@@ -51,9 +51,6 @@ import android.text.format.Time;
 import android.util.Log;
 import android.view.SurfaceHolder;
 
-import com.google.android.gms.common.api.GoogleApiClient;
-import com.google.android.gms.wearable.Wearable;
-
 import java.util.TimeZone;
 
 /**
@@ -187,23 +184,28 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
         };
         boolean mRegisteredTimeZoneReceiver = false;
 
-        Paint mAmbientBackgroundPaint;
+        Paint mBlackPaint;
+
         Paint mInteractiveBackgroundPaint;
+
         Paint mHourPaint;
         Paint mMinutePaint;
         Paint mStepPaint;
-        Paint mCirclePaint;
-        Paint mCircleBorderPaint;
-        DashPathEffect mAmbientDashEffect;
 
-        Path mMPath;
+        Paint mTopLayerBackgroundPaint;
+        Paint mTopLayerBorderPaint;
+        DashPathEffect mTopLayerBorderDashEffect;
+
+        Path  mMPath;
         Paint mMPathPaint;
         Paint mMFillPaint;
 
         Time mTime;
 
-        int mInteractiveBackgroundColor = Color.argb(255, 196, 18, 48);
-        int mInteractiveBackgroundColor2 = Color.argb(128, 196, 18, 48);
+        //The background is a radial gradient, color
+        int mInteractiveBackgroundColorInner = Color.argb(255, 196, 18, 48);
+        int mInteractiveBackgroundColorOuter = Color.argb(128, 196, 18, 48);
+
         int mInteractiveDigitsColor = Color.argb(255,255,255,255);
         int mInteractiveCircleColor = Color.argb(96,0,0,0);
         int mInteractiveCircleBorderColor = Color.argb(196,255,255,255);
@@ -247,26 +249,27 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
                     .setShowSystemUiTime(false)
                     .build());
 
-            mAmbientBackgroundPaint = new Paint();
-            mAmbientBackgroundPaint.setColor(Color.argb(255,0,0,0));
+            mBlackPaint = new Paint();
+            mBlackPaint.setColor(Color.argb(255,0,0,0));
+
             mInteractiveBackgroundPaint = new Paint();
             mInteractiveBackgroundPaint.setShader(new RadialGradient(WATCH_RADIUS,WATCH_RADIUS,
                     WATCH_RADIUS,
-                    mInteractiveBackgroundColor,mInteractiveBackgroundColor2,
+                    mInteractiveBackgroundColorInner,mInteractiveBackgroundColorOuter,
                     Shader.TileMode.CLAMP));
 
-            mCirclePaint = new Paint();
-            mCirclePaint.setColor(mInteractiveCircleColor);
-            mCirclePaint.setStyle(Paint.Style.FILL);
-            mCirclePaint.setAntiAlias(true);
+            mTopLayerBackgroundPaint = new Paint();
+            mTopLayerBackgroundPaint.setColor(mInteractiveCircleColor);
+            mTopLayerBackgroundPaint.setStyle(Paint.Style.FILL);
+            mTopLayerBackgroundPaint.setAntiAlias(true);
 
-            mCircleBorderPaint = new Paint();
-            mCircleBorderPaint.setColor(mInteractiveCircleBorderColor);
-            mCircleBorderPaint.setStyle(Paint.Style.STROKE);
-            mCircleBorderPaint.setAntiAlias(true);
-            mCircleBorderPaint.setStrokeWidth(3.0f);
+            mTopLayerBorderPaint = new Paint();
+            mTopLayerBorderPaint.setColor(mInteractiveCircleBorderColor);
+            mTopLayerBorderPaint.setStyle(Paint.Style.STROKE);
+            mTopLayerBorderPaint.setAntiAlias(true);
+            mTopLayerBorderPaint.setStrokeWidth(3.0f);
 
-            mAmbientDashEffect = new DashPathEffect(new float[]{(2.0f),(4.0f)},0);
+            mTopLayerBorderDashEffect = new DashPathEffect(new float[]{(2.0f),(4.0f)},0);
 
             mHourPaint = createTextPaint(mInteractiveDigitsColor, BOLD_TYPEFACE);
             mMinutePaint = createTextPaint(mInteractiveDigitsColor);
@@ -398,18 +401,18 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
                 Log.d(TAG, "onAmbientModeChanged: " + inAmbientMode);
             }
 
-            adjustPaintColorToCurrentMode(mCirclePaint, mInteractiveCircleColor,
+            adjustPaintColorToCurrentMode(mTopLayerBackgroundPaint, mInteractiveCircleColor,
                     Color.argb(255,0,0,0));
-            adjustPaintColorToCurrentMode(mCircleBorderPaint, mInteractiveCircleBorderColor,
+            adjustPaintColorToCurrentMode(mTopLayerBorderPaint, mInteractiveCircleBorderColor,
                     Color.argb(255,255,255,255));
 
             if(isInAmbientMode()){
-                mCircleBorderPaint.setPathEffect(mAmbientDashEffect);
-                mCircleBorderPaint.setStrokeWidth(2.0f);
+                mTopLayerBorderPaint.setPathEffect(mTopLayerBorderDashEffect);
+                mTopLayerBorderPaint.setStrokeWidth(2.0f);
                 mMFillPaint.setShader(mStippleShader);
             } else {
-                mCircleBorderPaint.setPathEffect(null);
-                mCircleBorderPaint.setStrokeWidth(3.0f);
+                mTopLayerBorderPaint.setPathEffect(null);
+                mTopLayerBorderPaint.setStrokeWidth(3.0f);
                 mMFillPaint.setShader(null);
             }
 
@@ -418,8 +421,8 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
                 mHourPaint.setAntiAlias(antiAlias);
                 mMinutePaint.setAntiAlias(antiAlias);
                 mStepPaint.setAntiAlias(antiAlias);
-                mCirclePaint.setAntiAlias(antiAlias);
-                mCircleBorderPaint.setAntiAlias(antiAlias);
+                mTopLayerBackgroundPaint.setAntiAlias(antiAlias);
+                mTopLayerBorderPaint.setAntiAlias(antiAlias);
             }
             invalidate();
 
@@ -446,19 +449,26 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
         public void onDraw(Canvas canvas, Rect bounds) {
             mTime.setToNow();
             long millis = System.currentTimeMillis() % 1000;
-            // Draw the background.
-            canvas.drawRect(0, 0, bounds.width(), bounds.height(), mAmbientBackgroundPaint);
+
+            //Clear the screen to black
+            canvas.drawRect(0, 0, bounds.width(), bounds.height(), mBlackPaint);
+
+            //Draw the gradient background, if in interactive mode
             if(!isInAmbientMode()){
                 canvas.drawRect(0, 0, bounds.width(), bounds.height(), mInteractiveBackgroundPaint);
             }
 
+            //The time is shown in a circle whose circumference touches
+            // both the center of the view and (in a circular watch), the
+            // edge of the view. It is at a 45 degree angle up and right
+            // of the center of the view
             int centerX = (int)(bounds.width()/2 + CIRCLE_OFFSET);
             int centerY = (int)(bounds.height()/2 - CIRCLE_OFFSET);
 
-            int left = (int)(centerX - (CIRCLE_RADIUS));
-            int right = (int)(left + (2 * CIRCLE_RADIUS));
-            int top = (int)(centerY - (CIRCLE_RADIUS));
-            int bot = (int)(top + (2 * CIRCLE_RADIUS));
+            int circleLeft = (int)(centerX - (CIRCLE_RADIUS));
+            int circleRight = (int)(circleLeft + (2 * CIRCLE_RADIUS));
+            int circleTop = (int)(centerY - (CIRCLE_RADIUS));
+            int circleBot = (int)(circleTop + (2 * CIRCLE_RADIUS));
 
             //Want upper-right corner of path to line up with centerX, centerY
             mMPath.offset(-217.0f+centerX,centerY);
@@ -470,21 +480,21 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
 
             // Draw the circle that goes under the time
             canvas.drawCircle(centerX, centerY,
-                    (CIRCLE_RADIUS),mCirclePaint);
+                    (CIRCLE_RADIUS),mTopLayerBackgroundPaint);
 
             if(!isInAmbientMode()) {
                 float pctAround = (mTime.second + millis/1000.0f)/60.0f;
 
                 if (mTime.minute % 2 == 0) {
-                    canvas.drawArc(left, top, right, bot, 270,
-                            360*pctAround, false, mCircleBorderPaint);
+                    canvas.drawArc(circleLeft, circleTop, circleRight, circleBot, 270,
+                            360*pctAround, false, mTopLayerBorderPaint);
                 } else {
-                    canvas.drawArc(left, top, right, bot, (270+360*pctAround),
-                            360*(1.0f-pctAround), false, mCircleBorderPaint);
+                    canvas.drawArc(circleLeft, circleTop, circleRight, circleBot, (270+360*pctAround),
+                            360*(1.0f-pctAround), false, mTopLayerBorderPaint);
                 }
             } else {
-                canvas.drawArc(left, top, right, bot, 0,
-                        360, false, mCircleBorderPaint);
+                canvas.drawArc(circleLeft, circleTop, circleRight, circleBot, 0,
+                        360, false, mTopLayerBorderPaint);
             }
 
             String hourString = String.valueOf(convertTo12Hour(mTime.hour));
@@ -521,7 +531,7 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
                     centerX + fullWidth/2,
                     centerY2 + fullHeight/2,
                     radius, radius,
-                    mCirclePaint);
+                    mTopLayerBackgroundPaint);
 
             if(isInAmbientMode()) {
                 canvas.drawRoundRect(
@@ -530,7 +540,7 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
                         centerX + fullWidth/2,
                         centerY2 + fullHeight/2,
                         radius, radius,
-                        mCircleBorderPaint);
+                        mTopLayerBorderPaint);
             }
             canvas.drawText(stepString, centerX+mFootsteps.getWidth()/2,
                     centerY2+textHeight/2,mStepPaint);
