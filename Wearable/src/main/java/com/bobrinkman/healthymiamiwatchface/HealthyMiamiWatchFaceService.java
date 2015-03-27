@@ -43,7 +43,6 @@ import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
-import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.support.wearable.watchface.CanvasWatchFaceService;
@@ -51,9 +50,7 @@ import android.support.wearable.watchface.WatchFaceStyle;
 import android.text.format.Time;
 import android.util.Log;
 import android.view.SurfaceHolder;
-import android.view.WindowInsets;
 
-import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.wearable.Wearable;
 
@@ -78,11 +75,16 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
     private static final int   PADDING = 12;
 
     /**
-     * Update rate in milliseconds for normal (not ambient and not mute) mode.
+     * Update rate in milliseconds for normal (not ambient) mode.
      * 20 FPS seems to be sufficiently smooth looking
      */
     private static final long NORMAL_UPDATE_RATE_MS = 1000/20;
 
+    /**
+     * Points to make the beveled M. Note that at the point we
+     * transition from the outer path to the inner path we
+     * have a visual artifact. Need to keep it off screen.
+     */
     private static final float[][] M_POINTS =
             {
                     //Outer perimeter
@@ -146,8 +148,8 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
         return new Engine();
     }
 
-    private class Engine extends CanvasWatchFaceService.Engine implements /*DataApi.DataListener,*/
-            GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener, SensorEventListener {
+    private class Engine extends CanvasWatchFaceService.Engine implements
+            SensorEventListener {
 
         static final int MSG_UPDATE_TIME = 0;
 
@@ -175,12 +177,6 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
                 }
             }
         };
-
-        GoogleApiClient mGoogleApiClient = new GoogleApiClient.Builder(HealthyMiamiWatchFaceService.this)
-                .addConnectionCallbacks(this)
-                .addOnConnectionFailedListener(this)
-                .addApi(Wearable.API)
-                .build();
 
         final BroadcastReceiver mTimeZoneReceiver = new BroadcastReceiver() {
             @Override
@@ -275,6 +271,9 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
             mHourPaint = createTextPaint(mInteractiveDigitsColor, BOLD_TYPEFACE);
             mMinutePaint = createTextPaint(mInteractiveDigitsColor);
             mStepPaint  = createTextPaint(mInteractiveDigitsColor);
+            mHourPaint.setTextSize(FONT_SIZE_LARGE);
+            mMinutePaint.setTextSize(FONT_SIZE_LARGE/2);
+            mStepPaint.setTextSize(FONT_SIZE_LARGE/4);
 
             mMPath = new Path();
             mMPath.moveTo((M_POINTS[0][0]),(M_POINTS[0][1]));
@@ -355,8 +354,6 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
             super.onVisibilityChanged(visible);
 
             if (visible) {
-                mGoogleApiClient.connect();
-
                 registerReceiver();
 
                 // Update time zone in case it changed while we weren't visible.
@@ -364,11 +361,6 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
                 mTime.setToNow();
             } else {
                 unregisterReceiver();
-
-                if (mGoogleApiClient != null && mGoogleApiClient.isConnected()) {
-                    //Wearable.DataApi.removeListener(mGoogleApiClient, this);
-                    mGoogleApiClient.disconnect();
-                }
             }
 
             // Whether the timer should be running depends on whether we're visible (as well as
@@ -391,35 +383,6 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
             }
             mRegisteredTimeZoneReceiver = false;
             HealthyMiamiWatchFaceService.this.unregisterReceiver(mTimeZoneReceiver);
-        }
-
-        @Override
-        public void onApplyWindowInsets(WindowInsets insets) {
-            if (Log.isLoggable(TAG, Log.DEBUG)) {
-                Log.d(TAG, "onApplyWindowInsets: " + (insets.isRound() ? "round" : "square"));
-            }
-            super.onApplyWindowInsets(insets);
-
-            float textSize = FONT_SIZE_LARGE;
-
-            mHourPaint.setTextSize(textSize);
-            mMinutePaint.setTextSize(textSize/2);
-            mStepPaint.setTextSize(textSize/4);
-        }
-
-        @Override
-        public void onPropertiesChanged(Bundle properties) {
-            super.onPropertiesChanged(properties);
-
-            boolean burnInProtection = properties.getBoolean(PROPERTY_BURN_IN_PROTECTION, false);
-            mHourPaint.setTypeface(burnInProtection ? NORMAL_TYPEFACE : BOLD_TYPEFACE);
-
-            mLowBitAmbient = properties.getBoolean(PROPERTY_LOW_BIT_AMBIENT, false);
-
-            if (Log.isLoggable(TAG, Log.DEBUG)) {
-                Log.d(TAG, "onPropertiesChanged: burn-in protection = " + burnInProtection
-                        + ", low-bit ambient = " + mLowBitAmbient);
-            }
         }
 
         @Override
@@ -596,29 +559,6 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
          */
         private boolean shouldTimerBeRunning() {
             return isVisible() && !isInAmbientMode();
-        }
-
-        @Override  // GoogleApiClient.ConnectionCallbacks
-        public void onConnected(Bundle connectionHint) {
-            if (Log.isLoggable(TAG, Log.DEBUG)) {
-                Log.d(TAG, "onConnected: " + connectionHint);
-            }
-            //Wearable.DataApi.addListener(mGoogleApiClient, Engine.this);
-            //updateConfigDataItemAndUiOnStartup();
-        }
-
-        @Override  // GoogleApiClient.ConnectionCallbacks
-        public void onConnectionSuspended(int cause) {
-            if (Log.isLoggable(TAG, Log.DEBUG)) {
-                Log.d(TAG, "onConnectionSuspended: " + cause);
-            }
-        }
-
-        @Override  // GoogleApiClient.OnConnectionFailedListener
-        public void onConnectionFailed(ConnectionResult result) {
-            if (Log.isLoggable(TAG, Log.DEBUG)) {
-                Log.d(TAG, "onConnectionFailed: " + result);
-            }
         }
 
         @SuppressLint("CommitPrefEdits")
