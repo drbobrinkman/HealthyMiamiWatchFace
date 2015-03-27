@@ -59,16 +59,19 @@ import java.util.TimeZone;
 public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
     private static final String TAG = "MiamiWatchFaceSrv";
 
-    private Typeface BOLD_TYPEFACE = null;
-    private Typeface NORMAL_TYPEFACE = null;
-
     //TODO: These are all in px. Would be better to switch to dp for layouts
+    //Watch measurement constants
     private static final float WATCH_WIDTH = 320.0f;
-    private static final float CIRCLE_WIDTH = WATCH_WIDTH/2.0f;
-    private static final float WATCH_RADIUS = CIRCLE_WIDTH;
+    private static final float WATCH_RADIUS =  WATCH_WIDTH/2.0f;
+
+    //Measurement constants for the main time display
+    private static final float CIRCLE_WIDTH = WATCH_RADIUS;
     private static final float CIRCLE_RADIUS = CIRCLE_WIDTH/2.0f;
     private static final float CIRCLE_OFFSET = (float) Math.sqrt(CIRCLE_RADIUS*CIRCLE_RADIUS/2.0f);
+
+    //Measurement constants for fonts and font spacing
     private static final float FONT_SIZE_LARGE = 90.0f;
+    //Padding around step counter as well as spacing between hours and minutes
     private static final int   PADDING = 12;
 
     /**
@@ -148,10 +151,10 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
     private class Engine extends CanvasWatchFaceService.Engine implements
             SensorEventListener {
 
-        static final int MSG_UPDATE_TIME = 0;
-
-        /** How often {@link #mUpdateTimeHandler} ticks in milliseconds. */
-        long mInteractiveUpdateRateMs = NORMAL_UPDATE_RATE_MS;
+        //Need a constant in for each message we might send. In this case
+        // there is only one type of message to send, "invalidate the screen,
+        // so the watch face gets updated"
+        static final int MSG_UPDATE_WATCHFACE = 0;
 
         /** Handler to update the time periodically in interactive mode. */
     //TODO: Figure out how this ought to be handled
@@ -159,7 +162,7 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
             @Override
             public void handleMessage(Message message) {
                 switch (message.what) {
-                    case MSG_UPDATE_TIME:
+                    case MSG_UPDATE_WATCHFACE:
                         if (Log.isLoggable(TAG, Log.VERBOSE)) {
                             Log.v(TAG, "updating time");
                         }
@@ -167,8 +170,8 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
                         if (shouldTimerBeRunning()) {
                             long timeMs = System.currentTimeMillis();
                             long delayMs =
-                                    mInteractiveUpdateRateMs - (timeMs % mInteractiveUpdateRateMs);
-                            mUpdateTimeHandler.sendEmptyMessageDelayed(MSG_UPDATE_TIME, delayMs);
+                                    NORMAL_UPDATE_RATE_MS - (timeMs % NORMAL_UPDATE_RATE_MS);
+                            mUpdateTimeHandler.sendEmptyMessageDelayed(MSG_UPDATE_WATCHFACE, delayMs);
                         }
                         break;
                 }
@@ -184,14 +187,18 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
         };
         boolean mRegisteredTimeZoneReceiver = false;
 
-        Paint mBlackPaint;
+        private Typeface mNormalTypeface = null;
+        private Typeface mThinTypeface = null;
 
-        Paint mInteractiveBackgroundPaint;
+        Paint mBlackPaint; //For clearing the screen
+        Paint mInteractiveBackgroundPaint; //red gradient for watch face
 
+        //Paints for text elements and step icon
         Paint mHourPaint;
         Paint mMinutePaint;
         Paint mStepPaint;
 
+        //Paints for top layer backgrounds, the circle and the pill shape around the steps
         Paint mTopLayerBackgroundPaint;
         Paint mTopLayerBorderPaint;
         DashPathEffect mTopLayerBorderDashEffect;
@@ -236,11 +243,11 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
             }
             super.onCreate(holder);
 
-            if(BOLD_TYPEFACE == null) {
-                BOLD_TYPEFACE = Typeface.createFromAsset(getAssets(), "Open Sans 600.ttf");
+            if(mNormalTypeface == null) {
+                mNormalTypeface = Typeface.createFromAsset(getAssets(), "Open Sans 600.ttf");
             }
-            if(NORMAL_TYPEFACE == null) {
-                NORMAL_TYPEFACE = Typeface.createFromAsset(getAssets(), "Open Sans 300.ttf");
+            if(mThinTypeface == null) {
+                mThinTypeface = Typeface.createFromAsset(getAssets(), "Open Sans 300.ttf");
             }
 
             setWatchFaceStyle(new WatchFaceStyle.Builder(HealthyMiamiWatchFaceService.this)
@@ -271,7 +278,7 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
 
             mTopLayerBorderDashEffect = new DashPathEffect(new float[]{(2.0f),(4.0f)},0);
 
-            mHourPaint = createTextPaint(mInteractiveDigitsColor, BOLD_TYPEFACE);
+            mHourPaint = createTextPaint(mInteractiveDigitsColor, mNormalTypeface);
             mMinutePaint = createTextPaint(mInteractiveDigitsColor);
             mStepPaint  = createTextPaint(mInteractiveDigitsColor);
             mHourPaint.setTextSize(FONT_SIZE_LARGE);
@@ -332,12 +339,12 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
 
         @Override
         public void onDestroy() {
-            mUpdateTimeHandler.removeMessages(MSG_UPDATE_TIME);
+            mUpdateTimeHandler.removeMessages(MSG_UPDATE_WATCHFACE);
             super.onDestroy();
         }
 
         private Paint createTextPaint(int defaultInteractiveColor) {
-            return createTextPaint(defaultInteractiveColor, NORMAL_TYPEFACE);
+            return createTextPaint(defaultInteractiveColor, mThinTypeface);
         }
 
         private Paint createTextPaint(int defaultInteractiveColor, Typeface typeface) {
@@ -555,9 +562,9 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
             if (Log.isLoggable(TAG, Log.DEBUG)) {
                 Log.d(TAG, "updateTimer");
             }
-            mUpdateTimeHandler.removeMessages(MSG_UPDATE_TIME);
+            mUpdateTimeHandler.removeMessages(MSG_UPDATE_WATCHFACE);
             if (shouldTimerBeRunning()) {
-                mUpdateTimeHandler.sendEmptyMessage(MSG_UPDATE_TIME);
+                mUpdateTimeHandler.sendEmptyMessage(MSG_UPDATE_WATCHFACE);
             }
         }
 
