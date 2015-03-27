@@ -76,6 +76,8 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
     private static final float CIRCLE_RADIUS = CIRCLE_WIDTH/2.0f;
     private static final float CIRCLE_OFFSET = (float) Math.sqrt(CIRCLE_RADIUS*CIRCLE_RADIUS/2.0f);
     private static final float FONT_SIZE_LARGE = 90.0f;
+
+    private static final int PADDING = 12;
     /**
      * Update rate in milliseconds for normal (not ambient and not mute) mode.
      * 20 FPS seems to be sufficiently smooth looking
@@ -249,10 +251,10 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
             super.onCreate(holder);
 
             if(BOLD_TYPEFACE == null) {
-                BOLD_TYPEFACE = Typeface.createFromAsset(getAssets(), "Helvetica.ttf");
+                BOLD_TYPEFACE = Typeface.createFromAsset(getAssets(), "Open Sans 600.ttf");
             }
             if(NORMAL_TYPEFACE == null) {
-                NORMAL_TYPEFACE = Typeface.createFromAsset(getAssets(), "HelveticaLight.ttf");
+                NORMAL_TYPEFACE = Typeface.createFromAsset(getAssets(), "Open Sans 300.ttf");
             }
 
             setWatchFaceStyle(new WatchFaceStyle.Builder(DigitalWatchFaceService.this)
@@ -567,35 +569,32 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
                         360, false, mCircleBorderPaint);
             }
 
-            float hourHeight = -mHourPaint.getFontMetrics().ascent
-                    + mHourPaint.getFontMetrics().leading/2;
-            float minuteHeight =  -mMinutePaint.getFontMetrics().ascent
-                    + mMinutePaint.getFontMetrics().leading/2;
-            float totalHeight = hourHeight + minuteHeight;
-            // Draw the hours.
             String hourString = String.valueOf(convertTo12Hour(mTime.hour));
-            canvas.drawText(hourString, centerX, centerY + (hourHeight-(totalHeight/2)), mHourPaint);
-
-            // Draw the minutes.
             String minuteString = formatTwoDigitNumber(mTime.minute);
+
+            Rect bgbounds = new Rect();
+            mHourPaint.getTextBounds(hourString,0,hourString.length(),bgbounds);
+            float hourHeight = bgbounds.height();
+            mMinutePaint.getTextBounds(minuteString,0,minuteString.length(),bgbounds);
+            float minuteHeight = bgbounds.height();
+            float totalHeight = hourHeight + PADDING + minuteHeight;
+
+            canvas.drawText(hourString, centerX, centerY + (hourHeight-(totalHeight/2)), mHourPaint);
             canvas.drawText(minuteString, centerX,
                     centerY+(totalHeight/2), mMinutePaint);
 
             //Draw the steps
             String stepString = String.valueOf(mLastStepCount - mMidnightStepCount);
             //Draw the background rectangle
-            Rect bgbounds = new Rect();
             mStepPaint.getTextBounds(stepString,0,stepString.length(),bgbounds);
 
             int textWidth = bgbounds.width();
             int textHeight = bgbounds.height();
-            //int centerX2 = centerX;
             int centerY2 = centerY + (int)(0.75*CIRCLE_WIDTH);
             int contentWidth = textWidth + mFootsteps.getWidth();
-            int padding = 12;
-            int roomForRounded = textHeight+2*padding;
+            int roomForRounded = textHeight+2*PADDING;
             int fullWidth = contentWidth + roomForRounded;
-            int fullHeight = textHeight + 2*padding;
+            int fullHeight = textHeight + 2*PADDING;
             int radius = roomForRounded/2;
 
             canvas.drawRoundRect(
