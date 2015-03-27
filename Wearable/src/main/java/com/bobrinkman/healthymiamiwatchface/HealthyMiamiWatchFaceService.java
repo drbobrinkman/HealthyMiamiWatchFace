@@ -81,6 +81,16 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
     private static final long NORMAL_UPDATE_RATE_MS = 1000/20;
 
     /**
+     * These are visual elements that aren't changed after they are initialized,
+     * they can be safely shared between different Engine instances
+     */
+    private static Typeface mNormalTypeface = null;
+    private static Typeface mThinTypeface = null;
+
+    private static Bitmap mFootsteps;
+    private static Shader mStippleShader;
+
+    /**
      * Points to make the beveled M. Note that at the point we
      * transition from the outer path to the inner path we
      * have a visual artifact. Need to keep it off screen.
@@ -154,7 +164,7 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
         //Need a constant in for each message we might send. In this case
         // there is only one type of message to send, "invalidate the screen,
         // so the watch face gets updated"
-        static final int MSG_UPDATE_WATCHFACE = 0;
+        private static final int MSG_UPDATE_WATCHFACE = 0;
 
         /** Handler to update the time periodically in interactive mode. */
     //TODO: Figure out how this ought to be handled
@@ -185,10 +195,7 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
                 mTime.setToNow();
             }
         };
-        boolean mRegisteredTimeZoneReceiver = false;
-
-        private Typeface mNormalTypeface = null;
-        private Typeface mThinTypeface = null;
+        private boolean mRegisteredTimeZoneReceiver = false;
 
         Paint mBlackPaint; //For clearing the screen
         Paint mInteractiveBackgroundPaint; //red gradient for watch face
@@ -223,10 +230,6 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
         int mLastStepCount = 0;
         int mCurDay = -1;
 
-        Bitmap mFootsteps;
-        Bitmap mStipple;
-        Shader mStippleShader;
-
         /**
          * Whether the display supports fewer bits for each color in ambient mode. When true, we
          * disable anti-aliasing in ambient mode.
@@ -243,6 +246,7 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
             }
             super.onCreate(holder);
 
+            //Because these are static, might already be initialized
             if(mNormalTypeface == null) {
                 mNormalTypeface = Typeface.createFromAsset(getAssets(), "Open Sans 600.ttf");
             }
@@ -331,10 +335,14 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
 
             // Load resources that have alternate values for round watches.
             Resources resources = HealthyMiamiWatchFaceService.this.getResources();
-            mFootsteps = BitmapFactory.decodeResource(resources,R.drawable.footprints);
-            mStipple = BitmapFactory.decodeResource(resources,R.drawable.stipple);
-            mStippleShader = new BitmapShader(mStipple, Shader.TileMode.REPEAT,
-                    Shader.TileMode.REPEAT);
+            if(mFootsteps == null) {
+                mFootsteps = BitmapFactory.decodeResource(resources, R.drawable.footprints);
+            }
+            if(mStippleShader == null) {
+                Bitmap stipple = BitmapFactory.decodeResource(resources, R.drawable.stipple);
+                mStippleShader = new BitmapShader(stipple, Shader.TileMode.REPEAT,
+                        Shader.TileMode.REPEAT);
+            }
         }
 
         @Override
