@@ -219,7 +219,7 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
         int mInteractiveBackgroundColor = Color.argb(255, 196, 18, 48);
         int mInteractiveBackgroundColor2 = Color.argb(128, 196, 18, 48);
         int mInteractiveDigitsColor = Color.argb(255,255,255,255);
-        int mInteractiveCircleColor = Color.argb(64,0,0,0);
+        int mInteractiveCircleColor = Color.argb(96,0,0,0);
         int mInteractiveCircleBorderColor = Color.argb(196,255,255,255);
         int mInteractiveMiamiMColor = Color.argb(255,255,255,255);
 
@@ -277,7 +277,7 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
             mCircleBorderPaint.setAntiAlias(true);
             mCircleBorderPaint.setStrokeWidth(3.0f);
 
-            mAmbientDashEffect = new DashPathEffect(new float[]{(1.0f),(3.0f)},0);
+            mAmbientDashEffect = new DashPathEffect(new float[]{(2.0f),(4.0f)},0);
 
             mHourPaint = createTextPaint(mInteractiveDigitsColor, BOLD_TYPEFACE);
             mMinutePaint = createTextPaint(mInteractiveDigitsColor);
@@ -318,6 +318,14 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
             mMidnightStepCount = mSettings.getInt("MidnightStepCount",0);
             mCurDay = mSettings.getInt("CurDay",0);
             mLastStepCount = mSettings.getInt("LastStepCount",0);
+            if (mLastStepCount < mMidnightStepCount) {
+                //Something has gone badly wrong. Reset to a weird number
+                // to make it clear that something went wrong
+                SharedPreferences.Editor editorMidnight = mSettings.edit();
+                mMidnightStepCount = mLastStepCount - 1234;
+                editorMidnight.putInt("MidnightStepCount",mMidnightStepCount);
+                editorMidnight.commit();
+            }
 
             // Load resources that have alternate values for round watches.
             Resources resources = DigitalWatchFaceService.this.getResources();
@@ -438,7 +446,7 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
 
             if(isInAmbientMode()){
                 mCircleBorderPaint.setPathEffect(mAmbientDashEffect);
-                mCircleBorderPaint.setStrokeWidth(1.0f);
+                mCircleBorderPaint.setStrokeWidth(2.0f);
             } else {
                 mCircleBorderPaint.setPathEffect(null);
                 mCircleBorderPaint.setStrokeWidth(3.0f);
@@ -770,6 +778,13 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
                 editorMidnight.putInt("MidnightStepCount",mMidnightStepCount);
                 mLastStepCount = 0;
                 editorMidnight.putInt("LastStepCount",mLastStepCount);
+                editorMidnight.commit();
+            } else if (curStepCount < mMidnightStepCount) {
+                //Something has gone badly wrong. Reset to a weird number
+                // to make it clear that something went wrong
+                SharedPreferences.Editor editorMidnight = mSettings.edit();
+                mMidnightStepCount = curStepCount - 1337;
+                editorMidnight.putInt("MidnightStepCount",mMidnightStepCount);
                 editorMidnight.commit();
             }
 
