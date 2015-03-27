@@ -25,6 +25,7 @@ import android.content.SharedPreferences;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.BitmapShader;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.DashPathEffect;
@@ -229,6 +230,8 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
         int mCurDay = -1;
 
         Bitmap mFootsteps;
+        Bitmap mStipple;
+        Shader mStippleShader;
 
         /**
          * Whether the display supports fewer bits for each color in ambient mode. When true, we
@@ -330,6 +333,9 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
             // Load resources that have alternate values for round watches.
             Resources resources = DigitalWatchFaceService.this.getResources();
             mFootsteps = BitmapFactory.decodeResource(resources,R.drawable.footprints);
+            mStipple = BitmapFactory.decodeResource(resources,R.drawable.stipple);
+            mStippleShader = new BitmapShader(mStipple, Shader.TileMode.REPEAT,
+                    Shader.TileMode.REPEAT);
         }
 
         @Override
@@ -447,9 +453,11 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
             if(isInAmbientMode()){
                 mCircleBorderPaint.setPathEffect(mAmbientDashEffect);
                 mCircleBorderPaint.setStrokeWidth(2.0f);
+                mMFillPaint.setShader(mStippleShader);
             } else {
                 mCircleBorderPaint.setPathEffect(null);
                 mCircleBorderPaint.setStrokeWidth(3.0f);
+                mMFillPaint.setShader(null);
             }
 
             if (mLowBitAmbient) {
@@ -534,9 +542,8 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
 
             //Want upper-right corner of path to line up with centerX, centerY
             mMPath.offset(-217.0f+centerX,centerY);
-            if(!isInAmbientMode()) {
-                canvas.drawPath(mMPath,mMFillPaint);
-            } else {
+            canvas.drawPath(mMPath,mMFillPaint);
+            if(isInAmbientMode()) {
                 canvas.drawPath(mMPath,mMPathPaint);
             }
             mMPath.offset(217.0f-centerX,-centerY);
