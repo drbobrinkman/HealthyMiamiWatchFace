@@ -1,5 +1,9 @@
 /*
- * Copyright (C) 2014 The Android Open Source Project
+ * Copyright (C) 2015 Bo Brinkman
+ *
+ * Portions are Copyright (C) 2014 The Android Open Source Project, and
+ *  used under the Apache License 2.0
+ *  (see: https://github.com/googlesamples/android-WatchFace/blob/master/Wearable/src/main/java/com/example/android/wearable/watchface/DigitalWatchFaceService.java)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -43,7 +47,6 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.support.wearable.watchface.CanvasWatchFaceService;
-import android.support.wearable.watchface.WatchFaceService;
 import android.support.wearable.watchface.WatchFaceStyle;
 import android.text.format.Time;
 import android.util.Log;
@@ -55,39 +58,30 @@ import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.wearable.Wearable;
 
 import java.util.TimeZone;
-import java.util.concurrent.TimeUnit;
 
 /**
- * Sample digital watch face with blinking colons and seconds. In ambient mode, the seconds are
- * replaced with an AM/PM indicator and the colons don't blink. On devices with low-bit ambient
- * mode, the text is drawn without anti-aliasing in ambient mode. On devices which require burn-in
- * protection, the hours are drawn in normal rather than bold. The time is drawn with less contrast
- * and without seconds in mute mode.
+ * Miami University themed digital watch face with step counter.
  */
-public class DigitalWatchFaceService extends CanvasWatchFaceService {
+public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
     private static final String TAG = "MiamiWatchFaceSrv";
 
     private Typeface BOLD_TYPEFACE = null;
     private Typeface NORMAL_TYPEFACE = null;
 
+    //TODO: These are all in px. Would be better to switch to dp for layouts
     private static final float WATCH_WIDTH = 320.0f;
     private static final float CIRCLE_WIDTH = WATCH_WIDTH/2.0f;
     private static final float WATCH_RADIUS = CIRCLE_WIDTH;
     private static final float CIRCLE_RADIUS = CIRCLE_WIDTH/2.0f;
     private static final float CIRCLE_OFFSET = (float) Math.sqrt(CIRCLE_RADIUS*CIRCLE_RADIUS/2.0f);
     private static final float FONT_SIZE_LARGE = 90.0f;
+    private static final int   PADDING = 12;
 
-    private static final int PADDING = 12;
     /**
      * Update rate in milliseconds for normal (not ambient and not mute) mode.
      * 20 FPS seems to be sufficiently smooth looking
      */
     private static final long NORMAL_UPDATE_RATE_MS = 1000/20;
-
-    /**
-     * Update rate in milliseconds for mute mode. We update every minute, like in ambient mode.
-     */
-    private static final long MUTE_UPDATE_RATE_MS = TimeUnit.MINUTES.toMillis(1);
 
     private static final float[][] M_POINTS =
             {
@@ -155,12 +149,6 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
     private class Engine extends CanvasWatchFaceService.Engine implements /*DataApi.DataListener,*/
             GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener, SensorEventListener {
 
-        /** Alpha value for drawing time when in mute mode. */
-        static final int MUTE_ALPHA = 100;
-
-        /** Alpha value for drawing time when not in mute mode. */
-        static final int NORMAL_ALPHA = 255;
-
         static final int MSG_UPDATE_TIME = 0;
 
         /** How often {@link #mUpdateTimeHandler} ticks in milliseconds. */
@@ -188,7 +176,7 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
             }
         };
 
-        GoogleApiClient mGoogleApiClient = new GoogleApiClient.Builder(DigitalWatchFaceService.this)
+        GoogleApiClient mGoogleApiClient = new GoogleApiClient.Builder(HealthyMiamiWatchFaceService.this)
                 .addConnectionCallbacks(this)
                 .addOnConnectionFailedListener(this)
                 .addApi(Wearable.API)
@@ -216,7 +204,6 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
         Paint mMPathPaint;
         Paint mMFillPaint;
 
-        boolean mMute;
         Time mTime;
 
         int mInteractiveBackgroundColor = Color.argb(255, 196, 18, 48);
@@ -243,6 +230,7 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
 
         SharedPreferences mSettings;
 
+        @SuppressLint("CommitPrefEdits")
         @Override
         public void onCreate(SurfaceHolder holder) {
             if (Log.isLoggable(TAG, Log.DEBUG)) {
@@ -257,7 +245,7 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
                 NORMAL_TYPEFACE = Typeface.createFromAsset(getAssets(), "Open Sans 300.ttf");
             }
 
-            setWatchFaceStyle(new WatchFaceStyle.Builder(DigitalWatchFaceService.this)
+            setWatchFaceStyle(new WatchFaceStyle.Builder(HealthyMiamiWatchFaceService.this)
                     .setCardPeekMode(WatchFaceStyle.PEEK_MODE_VARIABLE)
                     .setBackgroundVisibility(WatchFaceStyle.BACKGROUND_VISIBILITY_INTERRUPTIVE)
                     .setShowSystemUiTime(false)
@@ -333,7 +321,7 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
             }
 
             // Load resources that have alternate values for round watches.
-            Resources resources = DigitalWatchFaceService.this.getResources();
+            Resources resources = HealthyMiamiWatchFaceService.this.getResources();
             mFootsteps = BitmapFactory.decodeResource(resources,R.drawable.footprints);
             mStipple = BitmapFactory.decodeResource(resources,R.drawable.stipple);
             mStippleShader = new BitmapShader(mStipple, Shader.TileMode.REPEAT,
@@ -394,7 +382,7 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
             }
             mRegisteredTimeZoneReceiver = true;
             IntentFilter filter = new IntentFilter(Intent.ACTION_TIMEZONE_CHANGED);
-            DigitalWatchFaceService.this.registerReceiver(mTimeZoneReceiver, filter);
+            HealthyMiamiWatchFaceService.this.registerReceiver(mTimeZoneReceiver, filter);
         }
 
         private void unregisterReceiver() {
@@ -402,7 +390,7 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
                 return;
             }
             mRegisteredTimeZoneReceiver = false;
-            DigitalWatchFaceService.this.unregisterReceiver(mTimeZoneReceiver);
+            HealthyMiamiWatchFaceService.this.unregisterReceiver(mTimeZoneReceiver);
         }
 
         @Override
@@ -480,39 +468,6 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
         private void adjustPaintColorToCurrentMode(Paint paint, int interactiveColor,
                 int ambientColor) {
             paint.setColor(isInAmbientMode() ? ambientColor : interactiveColor);
-        }
-
-        @Override
-        public void onInterruptionFilterChanged(int interruptionFilter) {
-            if (Log.isLoggable(TAG, Log.DEBUG)) {
-                Log.d(TAG, "onInterruptionFilterChanged: " + interruptionFilter);
-            }
-            super.onInterruptionFilterChanged(interruptionFilter);
-
-            boolean inMuteMode = interruptionFilter == WatchFaceService.INTERRUPTION_FILTER_NONE;
-            // We only need to update once a minute in mute mode.
-            setInteractiveUpdateRateMs(inMuteMode ? MUTE_UPDATE_RATE_MS : NORMAL_UPDATE_RATE_MS);
-
-            if (mMute != inMuteMode) {
-                mMute = inMuteMode;
-                int alpha = inMuteMode ? MUTE_ALPHA : NORMAL_ALPHA;
-                mHourPaint.setAlpha(alpha);
-                mMinutePaint.setAlpha(alpha);
-                mStepPaint.setAlpha(alpha);
-                invalidate();
-            }
-        }
-
-        public void setInteractiveUpdateRateMs(long updateRateMs) {
-            if (updateRateMs == mInteractiveUpdateRateMs) {
-                return;
-            }
-            mInteractiveUpdateRateMs = updateRateMs;
-
-            // Stop and restart the timer so the new update rate takes effect immediately.
-            if (shouldTimerBeRunning()) {
-                updateTimer();
-            }
         }
 
         private String formatTwoDigitNumber(int hour) {
@@ -642,107 +597,6 @@ public class DigitalWatchFaceService extends CanvasWatchFaceService {
         private boolean shouldTimerBeRunning() {
             return isVisible() && !isInAmbientMode();
         }
-/*
-        private void updateConfigDataItemAndUiOnStartup() {
-            DigitalWatchFaceUtil.fetchConfigDataMap(mGoogleApiClient,
-                    new DigitalWatchFaceUtil.FetchConfigDataMapCallback() {
-                        @Override
-                        public void onConfigDataMapFetched(DataMap startupConfig) {
-                            // If the DataItem hasn't been created yet or some keys are missing,
-                            // use the default values.
-                            setDefaultValuesForMissingConfigKeys(startupConfig);
-                            DigitalWatchFaceUtil.putConfigDataItem(mGoogleApiClient, startupConfig);
-
-                            updateUiForConfigDataMap(startupConfig);
-                        }
-                    }
-            );
-        }
-
-        private void setDefaultValuesForMissingConfigKeys(DataMap config) {
-            addIntKeyIfMissing(config, DigitalWatchFaceUtil.KEY_BACKGROUND_COLOR,
-                    DigitalWatchFaceUtil.COLOR_VALUE_DEFAULT_AND_AMBIENT_BACKGROUND);
-            addIntKeyIfMissing(config, DigitalWatchFaceUtil.KEY_HOURS_COLOR,
-                    DigitalWatchFaceUtil.COLOR_VALUE_DEFAULT_AND_AMBIENT_HOUR_DIGITS);
-            addIntKeyIfMissing(config, DigitalWatchFaceUtil.KEY_MINUTES_COLOR,
-                    DigitalWatchFaceUtil.COLOR_VALUE_DEFAULT_AND_AMBIENT_MINUTE_DIGITS);
-            addIntKeyIfMissing(config, DigitalWatchFaceUtil.KEY_SECONDS_COLOR,
-                    DigitalWatchFaceUtil.COLOR_VALUE_DEFAULT_AND_AMBIENT_SECOND_DIGITS);
-        }
-
-        private void addIntKeyIfMissing(DataMap config, String key, int color) {
-            if (!config.containsKey(key)) {
-                config.putInt(key, color);
-            }
-        }
-
-        @Override // DataApi.DataListener
-        public void onDataChanged(DataEventBuffer dataEvents) {
-            try {
-                for (DataEvent dataEvent : dataEvents) {
-                    if (dataEvent.getType() != DataEvent.TYPE_CHANGED) {
-                        continue;
-                    }
-
-                    DataItem dataItem = dataEvent.getDataItem();
-                    if (!dataItem.getUri().getPath().equals(
-                            DigitalWatchFaceUtil.PATH_WITH_FEATURE)) {
-                        continue;
-                    }
-
-                    DataMapItem dataMapItem = DataMapItem.fromDataItem(dataItem);
-                    DataMap config = dataMapItem.getDataMap();
-                    if (Log.isLoggable(TAG, Log.DEBUG)) {
-                        Log.d(TAG, "Config DataItem updated:" + config);
-                    }
-                    updateUiForConfigDataMap(config);
-                }
-            } finally {
-                dataEvents.close();
-            }
-        }
-
-        private void updateUiForConfigDataMap(final DataMap config) {
-            boolean uiUpdated = false;
-            for (String configKey : config.keySet()) {
-                if (!config.containsKey(configKey)) {
-                    continue;
-                }
-                int color = config.getInt(configKey);
-                if (Log.isLoggable(TAG, Log.DEBUG)) {
-                    Log.d(TAG, "Found watch face config key: " + configKey + " -> "
-                            + Integer.toHexString(color));
-                }
-                if (updateUiForKey(configKey, color)) {
-                    uiUpdated = true;
-                }
-            }
-            if (uiUpdated) {
-                invalidate();
-            }
-        }
-*/
-        /**
-         * Updates the color of a UI item according to the given {@code configKey}. Does nothing if
-         * {@code configKey} isn't recognized.
-         *
-         * @return whether UI has been updated
-         */
-  /*      private boolean updateUiForKey(String configKey, int color) {
-            if (configKey.equals(DigitalWatchFaceUtil.KEY_BACKGROUND_COLOR)) {
-                setInteractiveBackgroundColor(color);
-            } else if (configKey.equals(DigitalWatchFaceUtil.KEY_HOURS_COLOR)) {
-                setInteractiveHourDigitsColor(color);
-            } else if (configKey.equals(DigitalWatchFaceUtil.KEY_MINUTES_COLOR)) {
-                setInteractiveMinuteDigitsColor(color);
-            } else if (configKey.equals(DigitalWatchFaceUtil.KEY_SECONDS_COLOR)) {
-                setInteractiveSecondDigitsColor(color);
-            } else {
-                Log.w(TAG, "Ignoring unknown config key: " + configKey);
-                return false;
-            }
-            return true;
-        }*/
 
         @Override  // GoogleApiClient.ConnectionCallbacks
         public void onConnected(Bundle connectionHint) {
