@@ -43,6 +43,7 @@ import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
+import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.support.wearable.watchface.CanvasWatchFaceService;
@@ -92,6 +93,7 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
 
     private static Paint mBlackPaint; //For clearing the screen
     private static Paint mInteractiveBackgroundPaint; //red gradient for watch face
+    private static Paint mAmbientBackgroundPaint; //gray gradient for watch face
 
     private static final DashPathEffect mTopLayerBorderDashEffect
             = new DashPathEffect(new float[]{(2.0f),(4.0f)},0);
@@ -99,10 +101,14 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
     //The background is a radial gradient, color
     private static final int INTERACTIVE_BACKGROUND_COLOR_INNER = Color.argb(255, 196, 18, 48);
     private static final int INTERACTIVE_BACKGROUND_COLOR_OUTER = Color.argb(128, 196, 18, 48);
+    private static final int AMBIENT_BACKGROUND_COLOR_INNER = Color.argb(255, 128, 128, 128);
+    private static final int AMBIENT_BACKGROUND_COLOR_OUTER = Color.argb(128, 128, 128, 128);
 
     private static final int INTERACTIVE_DIGITS_COLOR = Color.argb(255,255,255,255);
     private static final int INTERACTIVE_CIRCLE_COLOR = Color.argb(96,0,0,0);
+    private static final int LOWBIT_CIRCLE_COLOR = Color.argb(255,0,0,0);
     private static final int INTERACTIVE_CIRCLE_BORDER_COLOR = Color.argb(196,255,255,255);
+    private static final int LOWBIT_CIRCLE_BORDER_COLOR = Color.argb(255,255,255,255);
     private static final int INTERACTIVE_MIAMI_M_COLOR = Color.argb(255,255,255,255);
     /**
      * Points to make the beveled M. Note that at the point we
@@ -175,6 +181,18 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
     private class Engine extends CanvasWatchFaceService.Engine implements
             SensorEventListener {
 
+        @Override
+        public void onPropertiesChanged(Bundle properties) {
+            super.onPropertiesChanged(properties);
+            mLowBitAmbient = properties.getBoolean(PROPERTY_LOW_BIT_AMBIENT, false);
+            mBurnInProtection = properties.getBoolean(PROPERTY_BURN_IN_PROTECTION, false);
+
+            if (Log.isLoggable(TAG, Log.DEBUG)) {
+                Log.d(TAG, "onPropertiesChanged: low-bit ambient = " + mLowBitAmbient);
+                Log.d(TAG, "onPropertiesChanged: burn-in protection = " + mBurnInProtection);
+            }
+        }
+
         //Need a constant in for each message we might send. In this case
         // there is only one type of message to send, "invalidate the screen,
         // so the watch face gets updated"
@@ -221,6 +239,8 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
         // These cannot be static because the alpha amount changes during run time
         Paint mTopLayerBackgroundPaint;
         Paint mTopLayerBorderPaint;
+        Paint mTopLayerBackgroundPaintLowBit;
+        Paint mTopLayerBorderPaintLowBit;
 
         //Arguably, mMPath would make sense to be static except that onDraw() actually
         // changes the offset based on changes to timeCenterX and timeCenterY. If
@@ -231,6 +251,8 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
         // to separate them
         Paint mMPathPaint;
         Paint mMFillPaint;
+        Paint mMNoBurnFillPaint;
+        Paint mMLowBitFillPaint;
 
         Time mTime;
 
@@ -239,9 +261,9 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
         /**
          * Whether the display supports fewer bits for each color in ambient mode. When true, we
          * disable anti-aliasing in ambient mode.
-         * TODO: Set this variable appropriately
          */
         boolean mLowBitAmbient;
+        boolean mBurnInProtection;
 
         SharedPreferences mSettings;
 
@@ -279,17 +301,36 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
                         INTERACTIVE_BACKGROUND_COLOR_INNER, INTERACTIVE_BACKGROUND_COLOR_OUTER,
                         Shader.TileMode.CLAMP));
             }
+            if(mAmbientBackgroundPaint == null) {
+                mAmbientBackgroundPaint = new Paint();
+                mAmbientBackgroundPaint.setShader(new RadialGradient(WATCH_RADIUS, WATCH_RADIUS,
+                        WATCH_RADIUS,
+                        AMBIENT_BACKGROUND_COLOR_INNER, AMBIENT_BACKGROUND_COLOR_OUTER,
+                        Shader.TileMode.CLAMP));
+            }
 
             mTopLayerBackgroundPaint = new Paint();
             mTopLayerBackgroundPaint.setColor(INTERACTIVE_CIRCLE_COLOR);
             mTopLayerBackgroundPaint.setStyle(Paint.Style.FILL);
             mTopLayerBackgroundPaint.setAntiAlias(true);
 
+            mTopLayerBackgroundPaintLowBit = new Paint();
+            mTopLayerBackgroundPaintLowBit.setColor(LOWBIT_CIRCLE_COLOR);
+            mTopLayerBackgroundPaintLowBit.setStyle(Paint.Style.FILL);
+            mTopLayerBackgroundPaintLowBit.setAntiAlias(false);
+
             mTopLayerBorderPaint = new Paint();
             mTopLayerBorderPaint.setColor(INTERACTIVE_CIRCLE_BORDER_COLOR);
             mTopLayerBorderPaint.setStyle(Paint.Style.STROKE);
             mTopLayerBorderPaint.setAntiAlias(true);
             mTopLayerBorderPaint.setStrokeWidth(3.0f);
+
+            mTopLayerBorderPaintLowBit = new Paint();
+            mTopLayerBorderPaintLowBit.setColor(LOWBIT_CIRCLE_BORDER_COLOR);
+            mTopLayerBorderPaintLowBit.setStyle(Paint.Style.STROKE);
+            mTopLayerBorderPaintLowBit.setAntiAlias(false);
+            mTopLayerBorderPaintLowBit.setStrokeWidth(2.0f);
+            mTopLayerBorderPaintLowBit.setPathEffect(mTopLayerBorderDashEffect);
 
             mHourPaint = createTextPaint(INTERACTIVE_DIGITS_COLOR, mNormalTypeface);
             mMinutePaint = createTextPaint(INTERACTIVE_DIGITS_COLOR);
@@ -318,6 +359,27 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
             mMFillPaint.setStyle(Paint.Style.FILL);
             mMFillPaint.setAntiAlias(true);
 
+            mMLowBitFillPaint = new Paint();
+            mMLowBitFillPaint.setColor(INTERACTIVE_MIAMI_M_COLOR);
+            mMLowBitFillPaint.setStyle(Paint.Style.FILL);
+            mMLowBitFillPaint.setAntiAlias(false);
+
+            // Load resources that have alternate values for round watches.
+            Resources resources = HealthyMiamiWatchFaceService.this.getResources();
+            if(mFootsteps == null) {
+                mFootsteps = BitmapFactory.decodeResource(resources, R.drawable.footprints);
+            }
+            if(mStippleShader == null) {
+                Bitmap stipple = BitmapFactory.decodeResource(resources, R.drawable.stipple);
+                mStippleShader = new BitmapShader(stipple, Shader.TileMode.REPEAT,
+                        Shader.TileMode.REPEAT);
+            }
+
+            mMNoBurnFillPaint = new Paint();
+            mMNoBurnFillPaint.setShader(mStippleShader);
+            mMNoBurnFillPaint.setStyle(Paint.Style.FILL);
+            mMNoBurnFillPaint.setAntiAlias(false);
+
             mTime = new Time();
 
             mSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
@@ -330,17 +392,6 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
 
             mSettings = getSharedPreferences("HealthyMiamiWatchFace", MODE_PRIVATE);
             updateStepData(CALLED_FROM_ON_CREATE);
-
-            // Load resources that have alternate values for round watches.
-            Resources resources = HealthyMiamiWatchFaceService.this.getResources();
-            if(mFootsteps == null) {
-                mFootsteps = BitmapFactory.decodeResource(resources, R.drawable.footprints);
-            }
-            if(mStippleShader == null) {
-                Bitmap stipple = BitmapFactory.decodeResource(resources, R.drawable.stipple);
-                mStippleShader = new BitmapShader(stipple, Shader.TileMode.REPEAT,
-                        Shader.TileMode.REPEAT);
-            }
         }
 
         @Override
@@ -414,23 +465,6 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
                 Log.d(TAG, "onAmbientModeChanged: " + inAmbientMode);
             }
 
-            adjustPaintColorToCurrentMode(mTopLayerBackgroundPaint, INTERACTIVE_CIRCLE_COLOR,
-                    Color.argb(255,0,0,0));
-            adjustPaintColorToCurrentMode(mTopLayerBorderPaint, INTERACTIVE_CIRCLE_BORDER_COLOR,
-                    Color.argb(255,255,255,255));
-
-            if(inAmbientMode){
-                mTopLayerBorderPaint.setPathEffect(mTopLayerBorderDashEffect);
-                mTopLayerBorderPaint.setStrokeWidth(2.0f);
-                mMFillPaint.setShader(mStippleShader);
-                mMFillPaint.setAntiAlias(false);
-            } else {
-                mTopLayerBorderPaint.setPathEffect(null);
-                mTopLayerBorderPaint.setStrokeWidth(3.0f);
-                mMFillPaint.setShader(null);
-                mMFillPaint.setAntiAlias(true);
-            }
-
             /**
              * These paints are normally anti-aliased in ambient mode, but shouldn't be
              * if we have a low bit ambient
@@ -440,19 +474,16 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
                 mHourPaint.setAntiAlias(antiAlias);
                 mMinutePaint.setAntiAlias(antiAlias);
                 mStepPaint.setAntiAlias(antiAlias);
-                mTopLayerBackgroundPaint.setAntiAlias(antiAlias);
-                mTopLayerBorderPaint.setAntiAlias(antiAlias);
+            }
+            //Thinner fonts for less burn in
+            if(mBurnInProtection){
+                mHourPaint.setTypeface(inAmbientMode ? mThinTypeface : mNormalTypeface);
             }
             invalidate();
 
             // Whether the timer should be running depends on whether we're in ambient mode (as well
             // as whether we're visible), so we may need to start or stop the timer.
             updateTimer();
-        }
-
-        private void adjustPaintColorToCurrentMode(Paint paint, int interactiveColor,
-                int ambientColor) {
-            paint.setColor(isInAmbientMode() ? ambientColor : interactiveColor);
         }
 
         private String formatTwoDigitNumber(int hour) {
@@ -476,7 +507,12 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
             //Draw the gradient background, if in interactive mode
             if(!isInAmbientMode()){
                 canvas.drawRect(0, 0, bounds.width(), bounds.height(), mInteractiveBackgroundPaint);
-            }
+            } else if(!mLowBitAmbient) {
+                //Okay to use this even in burn-in-protection mode?
+                canvas.drawRect(0, 0, bounds.width(), bounds.height(), mAmbientBackgroundPaint);
+            } /* else {
+                //Do nothing, black background
+            }*/
 
             //The time is shown in a circle whose circumference touches
             // both the center of the view and (in a circular watch), the
@@ -492,15 +528,31 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
 
             //Want upper-right corner of path to line up with centerX, centerY
             mMPath.offset(-217.0f+timeCenterX,timeCenterY);
-            canvas.drawPath(mMPath,mMFillPaint);
-            if(isInAmbientMode()) {
+            //Always fill. Use stipple only in ambient mode, and only when burninprotection
+            // is enabled
+            Paint whichFill = mMFillPaint;
+            if(isInAmbientMode()){
+                if(mBurnInProtection){
+                    //Use this version in both lowBit and non-lowBit, when doing burn-in protect
+                    whichFill = mMNoBurnFillPaint;
+                } else if (mLowBitAmbient) {
+                    //Just disable anti-alias
+                    whichFill = mMLowBitFillPaint;
+                }
+            }
+            canvas.drawPath(mMPath,whichFill);
+
+            //Draw outline only when stipple is used
+            if(isInAmbientMode() && mBurnInProtection) {
                 canvas.drawPath(mMPath,mMPathPaint);
             }
             mMPath.offset(217.0f-timeCenterX,-timeCenterY);
 
             // Draw the circle that goes under the time
             canvas.drawCircle(timeCenterX, timeCenterY,
-                    (CIRCLE_RADIUS),mTopLayerBackgroundPaint);
+                    (CIRCLE_RADIUS),
+                    ((isInAmbientMode() && mLowBitAmbient) ?
+                            mTopLayerBackgroundPaintLowBit : mTopLayerBackgroundPaint));
 
             if(!isInAmbientMode()) {
                 float pctAround = (mTime.second + millis/1000.0f)/60.0f;
@@ -513,8 +565,14 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
                             360*(1.0f-pctAround), false, mTopLayerBorderPaint);
                 }
             } else {
+                Paint whichBorderPaint = mTopLayerBorderPaint;
+                if(mBurnInProtection || mLowBitAmbient){
+                    //Use dotted, whether in low bit or not
+                    whichBorderPaint = mTopLayerBorderPaintLowBit;
+                }
                 canvas.drawArc(circleLeft, circleTop, circleRight, circleBot, 0,
-                        360, false, mTopLayerBorderPaint);
+                        360, false,
+                        whichBorderPaint);
             }
 
             String hourString = String.valueOf(convertTo12Hour(mTime.hour));
@@ -527,7 +585,8 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
             float minuteHeight = textBounds.height();
             float totalHeight = hourHeight + PADDING + minuteHeight;
 
-            canvas.drawText(hourString, timeCenterX, timeCenterY + (hourHeight-(totalHeight/2)), mHourPaint);
+            canvas.drawText(hourString, timeCenterX, timeCenterY + (hourHeight-(totalHeight/2)),
+                    mHourPaint);
             canvas.drawText(minuteString, timeCenterX,
                     timeCenterY+(totalHeight/2), mMinutePaint);
 
@@ -550,23 +609,24 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
                     timeCenterX + fullWidth/2,
                     stepCenterY + fullHeight/2,
                     radius, radius,
-                    mTopLayerBackgroundPaint);
+                    ((isInAmbientMode() && mLowBitAmbient) ?
+                            mTopLayerBackgroundPaintLowBit : mTopLayerBackgroundPaint));
 
-            if(isInAmbientMode()) {
+            if(isInAmbientMode() && mLowBitAmbient) {
+                //Only draw border on step area in low bit ambient mode
                 canvas.drawRoundRect(
                         timeCenterX - fullWidth/2,
                         stepCenterY - fullHeight/2,
                         timeCenterX + fullWidth/2,
                         stepCenterY + fullHeight/2,
                         radius, radius,
-                        mTopLayerBorderPaint);
+                        mTopLayerBorderPaintLowBit);
             }
             canvas.drawText(stepString, timeCenterX+mFootsteps.getWidth()/2,
                     stepCenterY+textHeight/2,mStepPaint);
             //TODO this won't work for low bit ambient
             canvas.drawBitmap(mFootsteps, timeCenterX - contentWidth / 2 - mFootsteps.getWidth() / 2,
                     stepCenterY - mFootsteps.getHeight() / 2, null);
-
         }
 
         /**
