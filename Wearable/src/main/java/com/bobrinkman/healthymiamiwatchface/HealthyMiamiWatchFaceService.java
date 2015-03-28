@@ -235,9 +235,6 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
         Time mTime;
 
         SensorManager mSensorManager = null;
-        int mMidnightStepCount = 0;
-        int mLastStepCount = 0;
-        int mCurDay = -1;
 
         /**
          * Whether the display supports fewer bits for each color in ambient mode. When true, we
@@ -332,17 +329,7 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
             }
 
             mSettings = getSharedPreferences("HealthyMiamiWatchFace", MODE_PRIVATE);
-            mMidnightStepCount = mSettings.getInt("MidnightStepCount",0);
-            mCurDay = mSettings.getInt("CurDay",0);
-            mLastStepCount = mSettings.getInt("LastStepCount",0);
-            if (mLastStepCount < mMidnightStepCount) {
-                //Something has gone badly wrong. Reset to a weird number
-                // to make it clear that something went wrong
-                SharedPreferences.Editor editorMidnight = mSettings.edit();
-                mMidnightStepCount = mLastStepCount - 1234;
-                editorMidnight.putInt("MidnightStepCount",mMidnightStepCount);
-                editorMidnight.commit();
-            }
+            updateStepData(CALLED_FROM_ON_CREATE);
 
             // Load resources that have alternate values for round watches.
             Resources resources = HealthyMiamiWatchFaceService.this.getResources();
@@ -481,6 +468,7 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
         public void onDraw(Canvas canvas, Rect bounds) {
             mTime.setToNow();
             long millis = System.currentTimeMillis() % 1000;
+            updateStepData(CALLED_FROM_TIME_UPDATE);
 
             //Clear the screen to black
             canvas.drawRect(0, 0, bounds.width(), bounds.height(), mBlackPaint);
@@ -543,7 +531,8 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
             canvas.drawText(minuteString, timeCenterX,
                     timeCenterY+(totalHeight/2), mMinutePaint);
 
-            String stepString = String.valueOf(mLastStepCount - mMidnightStepCount);
+            String stepString = String.valueOf(mSettings.getInt(PREF_LAST_STEPS,0)
+                    - mSettings.getInt(PREF_MIDNIGHT_STEPS,0));
             mStepPaint.getTextBounds(stepString,0,stepString.length(),textBounds);
 
             int textWidth = textBounds.width();
@@ -602,45 +591,82 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
             return isVisible() && !isInAmbientMode();
         }
 
+        private final int CALLED_FROM_TIME_UPDATE = -1;
+        private final int CALLED_FROM_ON_CREATE = -2;
+
+        private final String PREF_CUR_DAY = "CurDay";
+        private final String PREF_LAST_STEPS = "LastStepCount";
+        private final String PREF_MIDNIGHT_STEPS = "MidnightStepCount";
+        /**
+         * Updates step count info in storage. This is a single function so that
+         * we don't have to think too hard about race conditions on the preferences.
+         * This should be the only place that mSettings gets edited.
+         *
+         * Callers:
+         *  - Time update function (really, onDraw)
+         *  - Step counter callback
+         *  - onCreate
+         */
+        private synchronized void updateStepData(int curStepCount){
+            if(curStepCount == CALLED_FROM_TIME_UPDATE){
+                //being called from the time update function, check for day rollover.
+                //When day changes, store the current step count as the midnight
+                // step count and update the current day
+                int todayIs = mTime.year * 10000 + mTime.month * 100 + mTime.monthDay;
+
+                //Note: If pref doesn't exist, this will set the current day and
+                // step count, which is probably the right thing to do
+                if(todayIs != mSettings.getInt(PREF_CUR_DAY,0)){
+                    int lastSteps = mSettings.getInt(PREF_LAST_STEPS, 0);
+                    SharedPreferences.Editor editor = mSettings.edit();
+                    editor.putInt(PREF_CUR_DAY,todayIs);
+                    editor.putInt(PREF_MIDNIGHT_STEPS,lastSteps);
+                    editor.commit();
+                }
+            } else if (curStepCount == CALLED_FROM_ON_CREATE) {
+                //In onCreate we may discover invalid preference state,
+                // which is when LAST_STEPS < MIDNIGHT_STEPS
+                //This should only result from debugging, so we should log it as an error
+                if(mSettings.getInt(PREF_LAST_STEPS,0) < mSettings.getInt(PREF_MIDNIGHT_STEPS,0)) {
+                    Log.e(TAG, "updateStepData: LAST_STEPS < MIDNIGHT_STEPS");
+                    SharedPreferences.Editor editor = mSettings.edit();
+                    //Since this is an invalid state, we will just clear all the prefs
+                    editor.putInt(PREF_CUR_DAY, 0);
+                    editor.putInt(PREF_MIDNIGHT_STEPS, 0);
+                    editor.putInt(PREF_LAST_STEPS, 0);
+                    editor.commit();
+                }
+            } else {
+                //Called by the sensor callback. Two possibilities:
+                // - Just a normal update of step count
+                // - curStepCount < LAST_STEPS ... this indicates a reboot.
+                if (curStepCount < mSettings.getInt(PREF_LAST_STEPS,0)) {
+                    //If this was a reboot, then we want to save the amount of steps
+                    // we had, by setting the MIDNIGHT_STEPS to an appropriate
+                    // negative number
+                    int lastSteps = mSettings.getInt(PREF_LAST_STEPS,0);
+                    int midnightSteps = mSettings.getInt(PREF_MIDNIGHT_STEPS,0);
+
+                    SharedPreferences.Editor editorMidnight = mSettings.edit();
+                    midnightSteps = -(lastSteps - midnightSteps);
+                    editorMidnight.putInt(PREF_MIDNIGHT_STEPS, midnightSteps);
+                    editorMidnight.putInt(PREF_LAST_STEPS, curStepCount);
+                    editorMidnight.commit();
+                } else {
+                    //Just got a new step count, nothing wacky happened
+                    SharedPreferences.Editor editor = mSettings.edit();
+                    editor.putInt(PREF_LAST_STEPS, curStepCount);
+                    editor.commit();
+                }
+            }
+        }
+
         @SuppressLint("CommitPrefEdits")
         @Override
         public void onSensorChanged(SensorEvent event) {
             //curStepCount is steps since system reboot
             int curStepCount = (int)event.values[0];
-            int todayIs = mTime.year*10000 + mTime.month*100 + mTime.monthDay;
-
-            if(curStepCount < mLastStepCount && todayIs == mCurDay){
-                //Either a time warp ... or likely a reboot.
-                //If this was a reboot, then we want to save the amount of steps
-                // we had, by setting the mMidnightStepCount to an appropriate
-                // negative number
-                SharedPreferences.Editor editorMidnight = mSettings.edit();
-                mMidnightStepCount = -(mLastStepCount - mMidnightStepCount);
-                editorMidnight.putInt("MidnightStepCount",mMidnightStepCount);
-                mLastStepCount = 0;
-                editorMidnight.putInt("LastStepCount",mLastStepCount);
-                editorMidnight.commit();
-            } else if (curStepCount < mMidnightStepCount) {
-                //Something has gone badly wrong. Reset to a weird number
-                // to make it clear that something went wrong
-                SharedPreferences.Editor editorMidnight = mSettings.edit();
-                mMidnightStepCount = curStepCount - 1337;
-                editorMidnight.putInt("MidnightStepCount",mMidnightStepCount);
-                editorMidnight.commit();
-            }
-
-            SharedPreferences.Editor editor = mSettings.edit();
-            mLastStepCount = curStepCount;
-            editor.putInt("LastStepCount",mLastStepCount);
-
-            if(todayIs != mCurDay){
-                mCurDay = todayIs;
-                mMidnightStepCount = mLastStepCount;
-                editor.putInt("MidnightStepCount",mMidnightStepCount);
-                editor.putInt("CurDay",mCurDay);
-            }
-
-            editor.commit();
+            updateStepData(curStepCount);
         }
 
         @Override
