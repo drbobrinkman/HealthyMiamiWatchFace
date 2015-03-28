@@ -90,6 +90,20 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
     private static Bitmap mFootsteps;
     private static Shader mStippleShader;
 
+    private static Paint mBlackPaint; //For clearing the screen
+    private static Paint mInteractiveBackgroundPaint; //red gradient for watch face
+
+    private static final DashPathEffect mTopLayerBorderDashEffect
+            = new DashPathEffect(new float[]{(2.0f),(4.0f)},0);
+
+    //The background is a radial gradient, color
+    private static final int INTERACTIVE_BACKGROUND_COLOR_INNER = Color.argb(255, 196, 18, 48);
+    private static final int INTERACTIVE_BACKGROUND_COLOR_OUTER = Color.argb(128, 196, 18, 48);
+
+    private static final int INTERACTIVE_DIGITS_COLOR = Color.argb(255,255,255,255);
+    private static final int INTERACTIVE_CIRCLE_COLOR = Color.argb(96,0,0,0);
+    private static final int INTERACTIVE_CIRCLE_BORDER_COLOR = Color.argb(196,255,255,255);
+    private static final int INTERACTIVE_MIAMI_M_COLOR = Color.argb(255,255,255,255);
     /**
      * Points to make the beveled M. Note that at the point we
      * transition from the outer path to the inner path we
@@ -164,7 +178,7 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
         //Need a constant in for each message we might send. In this case
         // there is only one type of message to send, "invalidate the screen,
         // so the watch face gets updated"
-        private static final int MSG_UPDATE_WATCHFACE = 0;
+        static final int MSG_UPDATE_WATCHFACE = 0;
 
         /** Handler to update the time periodically in interactive mode. */
     //TODO: Figure out how this ought to be handled
@@ -195,35 +209,30 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
                 mTime.setToNow();
             }
         };
-        private boolean mRegisteredTimeZoneReceiver = false;
+        boolean mRegisteredTimeZoneReceiver = false;
 
-        Paint mBlackPaint; //For clearing the screen
-        Paint mInteractiveBackgroundPaint; //red gradient for watch face
-
-        //Paints for text elements and step icon
+        //Paints for text elements and step icon. These cannot be static because
+        // anti-aliasing is turned on and off during run time
         Paint mHourPaint;
         Paint mMinutePaint;
         Paint mStepPaint;
 
         //Paints for top layer backgrounds, the circle and the pill shape around the steps
+        // These cannot be static because the alpha amount changes during run time
         Paint mTopLayerBackgroundPaint;
         Paint mTopLayerBorderPaint;
-        DashPathEffect mTopLayerBorderDashEffect;
 
-        Path  mMPath;
+        //Arguably, mMPath would make sense to be static except that onDraw() actually
+        // changes the offset based on changes to timeCenterX and timeCenterY. If
+        // onDraw was refactored to not depend on bound, this could be changed
+        Path mMPath;
+
+        //mMFillPaint changes during run time. mMPathPaint doesn't, but I don't want
+        // to separate them
         Paint mMPathPaint;
         Paint mMFillPaint;
 
         Time mTime;
-
-        //The background is a radial gradient, color
-        int mInteractiveBackgroundColorInner = Color.argb(255, 196, 18, 48);
-        int mInteractiveBackgroundColorOuter = Color.argb(128, 196, 18, 48);
-
-        int mInteractiveDigitsColor = Color.argb(255,255,255,255);
-        int mInteractiveCircleColor = Color.argb(96,0,0,0);
-        int mInteractiveCircleBorderColor = Color.argb(196,255,255,255);
-        int mInteractiveMiamiMColor = Color.argb(255,255,255,255);
 
         SensorManager mSensorManager = null;
         int mMidnightStepCount = 0;
@@ -233,6 +242,7 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
         /**
          * Whether the display supports fewer bits for each color in ambient mode. When true, we
          * disable anti-aliasing in ambient mode.
+         * TODO: Set this variable appropriately
          */
         boolean mLowBitAmbient;
 
@@ -260,31 +270,33 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
                     .setShowSystemUiTime(false)
                     .build());
 
-            mBlackPaint = new Paint();
-            mBlackPaint.setColor(Color.argb(255,0,0,0));
+            if(mBlackPaint == null) {
+                mBlackPaint = new Paint();
+                mBlackPaint.setColor(Color.argb(255, 0, 0, 0));
+            }
 
-            mInteractiveBackgroundPaint = new Paint();
-            mInteractiveBackgroundPaint.setShader(new RadialGradient(WATCH_RADIUS,WATCH_RADIUS,
-                    WATCH_RADIUS,
-                    mInteractiveBackgroundColorInner,mInteractiveBackgroundColorOuter,
-                    Shader.TileMode.CLAMP));
+            if(mInteractiveBackgroundPaint == null) {
+                mInteractiveBackgroundPaint = new Paint();
+                mInteractiveBackgroundPaint.setShader(new RadialGradient(WATCH_RADIUS, WATCH_RADIUS,
+                        WATCH_RADIUS,
+                        INTERACTIVE_BACKGROUND_COLOR_INNER, INTERACTIVE_BACKGROUND_COLOR_OUTER,
+                        Shader.TileMode.CLAMP));
+            }
 
             mTopLayerBackgroundPaint = new Paint();
-            mTopLayerBackgroundPaint.setColor(mInteractiveCircleColor);
+            mTopLayerBackgroundPaint.setColor(INTERACTIVE_CIRCLE_COLOR);
             mTopLayerBackgroundPaint.setStyle(Paint.Style.FILL);
             mTopLayerBackgroundPaint.setAntiAlias(true);
 
             mTopLayerBorderPaint = new Paint();
-            mTopLayerBorderPaint.setColor(mInteractiveCircleBorderColor);
+            mTopLayerBorderPaint.setColor(INTERACTIVE_CIRCLE_BORDER_COLOR);
             mTopLayerBorderPaint.setStyle(Paint.Style.STROKE);
             mTopLayerBorderPaint.setAntiAlias(true);
             mTopLayerBorderPaint.setStrokeWidth(3.0f);
 
-            mTopLayerBorderDashEffect = new DashPathEffect(new float[]{(2.0f),(4.0f)},0);
-
-            mHourPaint = createTextPaint(mInteractiveDigitsColor, mNormalTypeface);
-            mMinutePaint = createTextPaint(mInteractiveDigitsColor);
-            mStepPaint  = createTextPaint(mInteractiveDigitsColor);
+            mHourPaint = createTextPaint(INTERACTIVE_DIGITS_COLOR, mNormalTypeface);
+            mMinutePaint = createTextPaint(INTERACTIVE_DIGITS_COLOR);
+            mStepPaint  = createTextPaint(INTERACTIVE_DIGITS_COLOR);
             mHourPaint.setTextSize(FONT_SIZE_LARGE);
             mMinutePaint.setTextSize(FONT_SIZE_LARGE/2);
             mStepPaint.setTextSize(FONT_SIZE_LARGE/4);
@@ -299,14 +311,13 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
 
             //Used in ambient mode only
             mMPathPaint = new Paint();
-            mMPathPaint.setColor(mInteractiveMiamiMColor);
+            mMPathPaint.setColor(INTERACTIVE_MIAMI_M_COLOR);
             mMPathPaint.setStyle(Paint.Style.STROKE);
-            mMPathPaint.setAntiAlias(false);
+            mMPathPaint.setAntiAlias(false); //This actually looks terrible anti-aliased
             mMPathPaint.setStrokeWidth(1.0f);
 
-            //Used in interactive mode only
             mMFillPaint = new Paint();
-            mMFillPaint.setColor(mInteractiveMiamiMColor);
+            mMFillPaint.setColor(INTERACTIVE_MIAMI_M_COLOR);
             mMFillPaint.setStyle(Paint.Style.FILL);
             mMFillPaint.setAntiAlias(true);
 
@@ -416,21 +427,27 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
                 Log.d(TAG, "onAmbientModeChanged: " + inAmbientMode);
             }
 
-            adjustPaintColorToCurrentMode(mTopLayerBackgroundPaint, mInteractiveCircleColor,
+            adjustPaintColorToCurrentMode(mTopLayerBackgroundPaint, INTERACTIVE_CIRCLE_COLOR,
                     Color.argb(255,0,0,0));
-            adjustPaintColorToCurrentMode(mTopLayerBorderPaint, mInteractiveCircleBorderColor,
+            adjustPaintColorToCurrentMode(mTopLayerBorderPaint, INTERACTIVE_CIRCLE_BORDER_COLOR,
                     Color.argb(255,255,255,255));
 
-            if(isInAmbientMode()){
+            if(inAmbientMode){
                 mTopLayerBorderPaint.setPathEffect(mTopLayerBorderDashEffect);
                 mTopLayerBorderPaint.setStrokeWidth(2.0f);
                 mMFillPaint.setShader(mStippleShader);
+                mMFillPaint.setAntiAlias(false);
             } else {
                 mTopLayerBorderPaint.setPathEffect(null);
                 mTopLayerBorderPaint.setStrokeWidth(3.0f);
                 mMFillPaint.setShader(null);
+                mMFillPaint.setAntiAlias(true);
             }
 
+            /**
+             * These paints are normally anti-aliased in ambient mode, but shouldn't be
+             * if we have a low bit ambient
+             */
             if (mLowBitAmbient) {
                 boolean antiAlias = !inAmbientMode;
                 mHourPaint.setAntiAlias(antiAlias);
@@ -557,6 +574,7 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
             }
             canvas.drawText(stepString, timeCenterX+mFootsteps.getWidth()/2,
                     stepCenterY+textHeight/2,mStepPaint);
+            //TODO this won't work for low bit ambient
             canvas.drawBitmap(mFootsteps, timeCenterX - contentWidth / 2 - mFootsteps.getWidth() / 2,
                     stepCenterY - mFootsteps.getHeight() / 2, null);
 
