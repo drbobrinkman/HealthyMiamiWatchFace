@@ -367,10 +367,11 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
                 mThinTypeface = Typeface.createFromAsset(getAssets(), "Open Sans 300.ttf");
             }
 
-            //TODO: Check this stuff
             setWatchFaceStyle(new WatchFaceStyle.Builder(HealthyMiamiWatchFaceService.this)
+                    .setAmbientPeekMode(WatchFaceStyle.AMBIENT_PEEK_MODE_HIDDEN)
                     .setCardPeekMode(WatchFaceStyle.PEEK_MODE_VARIABLE)
                     .setBackgroundVisibility(WatchFaceStyle.BACKGROUND_VISIBILITY_INTERRUPTIVE)
+                    .setViewProtection(WatchFaceStyle.PROTECT_HOTWORD_INDICATOR | WatchFaceStyle.PROTECT_STATUS_BAR)
                     .setShowSystemUiTime(false)
                     .build());
 
