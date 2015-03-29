@@ -363,6 +363,7 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
                 mThinTypeface = Typeface.createFromAsset(getAssets(), "Open Sans 300.ttf");
             }
 
+            //TODO: Check this stuff
             setWatchFaceStyle(new WatchFaceStyle.Builder(HealthyMiamiWatchFaceService.this)
                     .setCardPeekMode(WatchFaceStyle.PEEK_MODE_VARIABLE)
                     .setBackgroundVisibility(WatchFaceStyle.BACKGROUND_VISIBILITY_INTERRUPTIVE)
@@ -710,7 +711,6 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
             canvas.drawText(stepString, timeCenterX+SHOE_PATH_WIDTH/2,
                     stepCenterY+textHeight/2,mStepPaint);
 
-            //TODO: Add anti-aliased path paint for burnin = true, lowbit = false?
             Paint whichPaint = mMFillPaint;
             if(isInAmbientMode()){
                 if(mBurnInProtection){
