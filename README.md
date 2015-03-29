@@ -1,52 +1,13 @@
-Android WatchFace Sample
+Healthy Miami Watch Face
 ===================================
 
-This sample demonstrates how to create watch faces for android wear and includes a phone app
-and a wearable app. The wearable app has a variety of watch faces including analog, digital,
-opengl, calendar, etc. It also includes a watch-side configuration example. The phone app
-includes a phone-side configuration example.
+A Miami University themed Android Wear watch face, with step tracker. Based on the DigitalWatchFace example in https://github.com/googlesamples/android-WatchFace
 
-Pre-requisites
---------------
-
-- Android SDK v21
-- Android Build Tools v21.1.1
-- Android Support Repository
-
-Getting Started
----------------
-
-This sample uses the Gradle build system. To build this project, use the
-"gradlew build" command or use "Import Project" in Android Studio.
-
-Support
+Copyright Notices
 -------
 
-- Google+ Community: https://plus.google.com/communities/105153134372062985968
-- Stack Overflow: http://stackoverflow.com/questions/tagged/android
+All source code in this project is released under the Apache License, Version 2.0, for free re-use. See the LICENSE file. Some portions are copyright Bo Brinkman, some are copyright The Android Open Source Project.
 
-If you've found an error in this sample, please file an issue:
-https://github.com/googlesamples/android-WatchFace
+All image files were created by Bo Brinkman, and are most likely not copyrightable. In the event that they are, they are free for reuse under the Creative Commons CC0, Verion 1.0 license (http://creativecommons.org/publicdomain/zero/1.0/)
 
-Patches are encouraged, and may be submitted by forking this project and
-submitting a pull request through GitHub. Please see CONTRIBUTING.md for more details.
-
-License
--------
-
-Copyright 2014 The Android Open Source Project, Inc.
-
-Licensed to the Apache Software Foundation (ASF) under one or more contributor
-license agreements.  See the NOTICE file distributed with this work for
-additional information regarding copyright ownership.  The ASF licenses this
-file to you under the Apache License, Version 2.0 (the "License"); you may not
-use this file except in compliance with the License.  You may obtain a copy of
-the License at
-
-http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
-License for the specific language governing permissions and limitations under
-the License.
+The Open Sans font is used under the Apache License, Version 2.0. See http://www.google.com/fonts/specimen/Open+Sans for more details.
