@@ -439,7 +439,7 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
             mMPathPaint = new Paint();
             mMPathPaint.setColor(INTERACTIVE_MIAMI_M_COLOR);
             mMPathPaint.setStyle(Paint.Style.STROKE);
-            mMPathPaint.setAntiAlias(false); //This actually looks terrible anti-aliased
+            mMPathPaint.setAntiAlias(true);
             mMPathPaint.setStrokeWidth(1.0f);
 
             mMFillPaint = new Paint();
@@ -559,6 +559,7 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
                 mHourPaint.setAntiAlias(antiAlias);
                 mMinutePaint.setAntiAlias(antiAlias);
                 mStepPaint.setAntiAlias(antiAlias);
+                mMPathPaint.setAntiAlias(antiAlias);
             }
             //Thinner fonts for less burn in
             if(mBurnInProtection){
@@ -724,7 +725,7 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
             float shoeOffsetX = timeCenterX - contentWidth / 2 - SHOE_PATH_WIDTH / 2;
             float shoeOffsetY = stepCenterY - SHOE_PATH_HEIGHT/ 2;
             mShoePath.offset(shoeOffsetX,shoeOffsetY);
-            canvas.drawPath(mShoePath,whichPaint);
+            canvas.drawPath(mShoePath, whichPaint);
             mShoePath.offset(-shoeOffsetX,-shoeOffsetY);
         }
 
