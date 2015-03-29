@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Copyright (C) 2014 The Android Open Source Project
+<!-- Copyright (C) 2015 Bo Brinkman
 
      Licensed under the Apache License, Version 2.0 (the "License");
      you may not use this file except in compliance with the License.
@@ -43,12 +43,6 @@
             <meta-data
                     android:name="com.google.android.wearable.watchface.preview_circular"
                     android:resource="@drawable/preview_digital_circular" />
-            <meta-data
-                    android:name="com.google.android.wearable.watchface.companionConfigurationAction"
-                    android:value="com.example.android.wearable.watchface.CONFIG_DIGITAL" />
-            <meta-data
-                    android:name="com.google.android.wearable.watchface.wearableConfigurationAction"
-                    android:value="com.example.android.wearable.watchface.CONFIG_DIGITAL" />
             <intent-filter>
                 <action android:name="android.service.wallpaper.WallpaperService" />
                 <category android:name="com.google.android.wearable.watchface.category.WATCH_FACE" />

@@ -1,9 +1,8 @@
 /*
  * Copyright (C) 2015 Bo Brinkman
  *
- * Portions are Copyright (C) 2014 The Android Open Source Project, and
- *  used under the Apache License 2.0
- *  (see: https://github.com/googlesamples/android-WatchFace/blob/master/Wearable/src/main/java/com/example/android/wearable/watchface/DigitalWatchFaceService.java)
+ * Portions are derived from: https://github.com/googlesamples/android-WatchFace/blob/master/Wearable/src/main/java/com/example/android/wearable/watchface/DigitalWatchFaceService.java)
+ *  and used under the Apache Lincense, Version 2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
