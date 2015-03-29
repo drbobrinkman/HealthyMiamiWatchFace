@@ -88,7 +88,6 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
     private static Typeface mNormalTypeface = null;
     private static Typeface mThinTypeface = null;
 
-    private static Bitmap mFootsteps;
     private static Shader mStippleShader;
 
     private static Paint mBlackPaint; //For clearing the screen
@@ -110,6 +109,9 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
     private static final int INTERACTIVE_CIRCLE_BORDER_COLOR = Color.argb(196,255,255,255);
     private static final int LOWBIT_CIRCLE_BORDER_COLOR = Color.argb(255,255,255,255);
     private static final int INTERACTIVE_MIAMI_M_COLOR = Color.argb(255,255,255,255);
+
+    private static final float SHOE_PATH_WIDTH = 11.373f;
+    private static final float SHOE_PATH_HEIGHT = 22.0f;
     /**
      * Points to make the beveled M. Note that at the point we
      * transition from the outer path to the inner path we
@@ -173,6 +175,84 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
                     {86.6f, 155.2f},
                     {20.3f, 155.2f}
             } ;
+
+    private static final double[][] SHOE_POINTS = {
+            {0.00674493,11.299466},
+            {0.04524493,9.913266},
+            {0.27628493,8.3729658},
+            {0.73836493,7.1022658},
+            {1.1234349,6.2936658},
+            {1.7780549,5.4849658},
+            {2.6252049,5.0613658},
+            {3.6263849,4.9843658},
+            {4.3195049,5.2924658},
+            {5.0126249,6.1010658},
+            {5.6672449,7.5258658},
+            {5.8982849,8.0649658},
+            {5.6287349,6.6016658},
+            {5.2051649,5.4849658},
+            {5.0126249,4.3682658},
+            {5.0511249,3.0590658},
+            {5.4361949,1.9808658},
+            {5.8982749,1.018166},
+            {6.3988649,0.36356603},
+            {7.1690049,0.05556603},
+            {8.3627149,0.05556603},
+            {9.1713549,0.47906603},
+            {9.8259749,0.97966599},
+            {10.326565,1.6728658},
+            {10.673125,2.4429658},
+            {11.058195,3.5981658},
+            {11.327735,4.5608658},
+            {11.366235,5.2154658},
+            {11.366235,6.1781658},
+            {11.173705,7.1792658},
+            {10.942665,8.4500658},
+            {10.904165,9.3741658},
+            {10.904165,10.452366},
+            {10.904165,11.607566},
+            {10.904165,13.186366},
+            {10.904165,14.187566},
+            {10.634615,15.150166},
+            {10.211045,15.727766},
+            {9.5179149,16.266866},
+            {8.7862849,16.343866},
+            {7.9776449,16.304866},
+            {7.1690049,15.996866},
+            {6.6684149,15.534766},
+            {6.2063249,14.649166},
+            {6.0523049,13.763466},
+            {6.1678249,12.492766},
+            {6.3603549,11.029466},
+            {6.2833549,10.336366},
+            {6.0908149,9.7202658},
+            {6.0523149,11.067966},
+            {5.7057549,11.915166},
+            {5.5517249,12.723766},
+            {5.3591849,13.686466},
+            {5.3591849,14.379566},
+            {5.5132149,15.188266},
+            {5.8597749,16.189366},
+            {6.0908149,17.113566},
+            {6.3218549,17.999166},
+            {6.3988549,18.653866},
+            {6.4758549,19.462466},
+            {6.2833249,20.617666},
+            {5.7827349,21.349266},
+            {4.9355849,21.888366},
+            {4.2039549,22.042466},
+            {3.3568049,22.042466},
+            {2.6251749,21.618866},
+            {1.8550349,20.579166},
+            {1.6239949,19.616466},
+            {1.4314649,17.768166},
+            {1.3159449,16.073866},
+            {1.0848949,14.995666},
+            {0.73833493,13.840466},
+            {0.31476493,12.800766},
+            {0.04521493,11.876666}
+    };
+
     @Override
     public Engine onCreateEngine() {
         return new Engine();
@@ -246,6 +326,7 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
         // changes the offset based on changes to timeCenterX and timeCenterY. If
         // onDraw was refactored to not depend on bound, this could be changed
         Path mMPath;
+        Path mShoePath;
 
         //mMFillPaint changes during run time. mMPathPaint doesn't, but I don't want
         // to separate them
@@ -346,6 +427,13 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
             }
             mMPath.close();
             mMPath.setFillType(Path.FillType.EVEN_ODD);
+            mShoePath = new Path();
+            mShoePath.moveTo((float)(SHOE_POINTS[0][0]),(float)(SHOE_POINTS[0][1]));
+            for(int i=1;i<SHOE_POINTS.length;i++){
+                mShoePath.lineTo((float)(SHOE_POINTS[i][0]),(float)(SHOE_POINTS[i][1]));
+            }
+            mShoePath.close();
+            mShoePath.setFillType(Path.FillType.EVEN_ODD);
 
             //Used in ambient mode only
             mMPathPaint = new Paint();
@@ -366,9 +454,6 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
 
             // Load resources that have alternate values for round watches.
             Resources resources = HealthyMiamiWatchFaceService.this.getResources();
-            if(mFootsteps == null) {
-                mFootsteps = BitmapFactory.decodeResource(resources, R.drawable.footprints);
-            }
             if(mStippleShader == null) {
                 Bitmap stipple = BitmapFactory.decodeResource(resources, R.drawable.stipple);
                 mStippleShader = new BitmapShader(stipple, Shader.TileMode.REPEAT,
@@ -597,7 +682,7 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
             int textWidth = textBounds.width();
             int textHeight = textBounds.height();
             int stepCenterY = timeCenterY + (int)(0.75*CIRCLE_WIDTH);
-            int contentWidth = textWidth + mFootsteps.getWidth();
+            int contentWidth = textWidth + (int)SHOE_PATH_WIDTH;
             int roomForRounded = textHeight+2*PADDING;
             int fullWidth = contentWidth + roomForRounded;
             int fullHeight = textHeight + 2*PADDING;
@@ -622,11 +707,25 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
                         radius, radius,
                         mTopLayerBorderPaintLowBit);
             }
-            canvas.drawText(stepString, timeCenterX+mFootsteps.getWidth()/2,
+            canvas.drawText(stepString, timeCenterX+SHOE_PATH_WIDTH/2,
                     stepCenterY+textHeight/2,mStepPaint);
-            //TODO this won't work for low bit ambient
-            canvas.drawBitmap(mFootsteps, timeCenterX - contentWidth / 2 - mFootsteps.getWidth() / 2,
-                    stepCenterY - mFootsteps.getHeight() / 2, null);
+
+            //TODO: Add anti-aliased path paint for burnin = true, lowbit = false?
+            Paint whichPaint = mMFillPaint;
+            if(isInAmbientMode()){
+                if(mBurnInProtection){
+                    //Use this version in both lowBit and non-lowBit, when doing burn-in protect
+                    whichPaint = mMPathPaint;
+                } else if (mLowBitAmbient) {
+                    //Just disable anti-alias
+                    whichPaint = mMLowBitFillPaint;
+                }
+            }
+            float shoeOffsetX = timeCenterX - contentWidth / 2 - SHOE_PATH_WIDTH / 2;
+            float shoeOffsetY = stepCenterY - SHOE_PATH_HEIGHT/ 2;
+            mShoePath.offset(shoeOffsetX,shoeOffsetY);
+            canvas.drawPath(mShoePath,whichPaint);
+            mShoePath.offset(-shoeOffsetX,-shoeOffsetY);
         }
 
         /**
