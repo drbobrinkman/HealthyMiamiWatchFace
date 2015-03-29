@@ -74,6 +74,9 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
     //Padding around step counter as well as spacing between hours and minutes
     private static final int   PADDING = 12;
 
+    //Dimensions of the Beveled M path
+    private static final float M_PATH_WIDTH = 217.0f;
+    private static final float M_PATH_HEIGHT = 164.0f;
     /**
      * Update rate in milliseconds for normal (not ambient) mode.
      * 20 FPS seems to be sufficiently smooth looking
@@ -313,6 +316,7 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
         Paint mHourPaint;
         Paint mMinutePaint;
         Paint mStepPaint;
+        Paint mTMPaint;
 
         //Paints for top layer backgrounds, the circle and the pill shape around the steps
         // These cannot be static because the alpha amount changes during run time
@@ -416,9 +420,11 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
             mHourPaint = createTextPaint(INTERACTIVE_DIGITS_COLOR, mNormalTypeface);
             mMinutePaint = createTextPaint(INTERACTIVE_DIGITS_COLOR);
             mStepPaint  = createTextPaint(INTERACTIVE_DIGITS_COLOR);
+            mTMPaint  = createTextPaint(INTERACTIVE_DIGITS_COLOR, mNormalTypeface);
             mHourPaint.setTextSize(FONT_SIZE_LARGE);
             mMinutePaint.setTextSize(FONT_SIZE_LARGE/2);
             mStepPaint.setTextSize(FONT_SIZE_LARGE/4);
+            mTMPaint.setTextSize(FONT_SIZE_LARGE/8);
 
             mMPath = new Path();
             mMPath.moveTo((M_POINTS[0][0]),(M_POINTS[0][1]));
@@ -559,6 +565,7 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
                 mHourPaint.setAntiAlias(antiAlias);
                 mMinutePaint.setAntiAlias(antiAlias);
                 mStepPaint.setAntiAlias(antiAlias);
+                mTMPaint.setAntiAlias(antiAlias);
                 mMPathPaint.setAntiAlias(antiAlias);
             }
             //Thinner fonts for less burn in
@@ -613,7 +620,7 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
             int circleBot = (int)(circleTop + (2 * CIRCLE_RADIUS));
 
             //Want upper-right corner of path to line up with centerX, centerY
-            mMPath.offset(-217.0f+timeCenterX,timeCenterY);
+            mMPath.offset(-M_PATH_WIDTH+timeCenterX,timeCenterY);
             //Always fill. Use stipple only in ambient mode, and only when burninprotection
             // is enabled
             Paint whichFill = mMFillPaint;
@@ -627,12 +634,14 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
                 }
             }
             canvas.drawPath(mMPath,whichFill);
+            //Add TM symbol
+            canvas.drawText("TM",timeCenterX+PADDING,timeCenterY+M_PATH_HEIGHT,mTMPaint);
 
             //Draw outline only when stipple is used
             if(isInAmbientMode() && mBurnInProtection) {
                 canvas.drawPath(mMPath,mMPathPaint);
             }
-            mMPath.offset(217.0f-timeCenterX,-timeCenterY);
+            mMPath.offset(M_PATH_WIDTH-timeCenterX,-timeCenterY);
 
             // Draw the circle that goes under the time
             canvas.drawCircle(timeCenterX, timeCenterY,
