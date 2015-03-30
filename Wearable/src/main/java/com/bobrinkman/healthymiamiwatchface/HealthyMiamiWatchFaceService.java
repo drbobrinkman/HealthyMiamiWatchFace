@@ -658,9 +658,22 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
                     canvas.drawArc(circleLeft-1, circleTop-1, circleRight+1, circleBot+1, 270,
                             360*pctAround, false, mTopLayerBorderPaint);
                 } else {
-                    canvas.drawArc(circleLeft-1, circleTop-1, circleRight+1, circleBot+1, (270+360*pctAround),
+                    canvas.drawArc(circleLeft-1, circleTop-1, circleRight+1, circleBot+1,
+                            (270+360*pctAround),
                             360*(1.0f-pctAround), false, mTopLayerBorderPaint);
                 }
+
+                //Inner circle counts each second
+                pctAround = millis/1000.0f;
+                if (mTime.second % 2 == 0) {
+                    canvas.drawArc(circleLeft+1, circleTop+1, circleRight-1, circleBot-1, 270,
+                            360*pctAround, false, mTopLayerBorderPaint);
+                } else {
+                    canvas.drawArc(circleLeft+1, circleTop+1, circleRight-1, circleBot-1,
+                            (270+360*pctAround),
+                            360*(1.0f-pctAround), false, mTopLayerBorderPaint);
+                }
+
             } else {
                 Paint whichBorderPaint = mTopLayerBorderPaint;
                 if(mBurnInProtection || mLowBitAmbient){
