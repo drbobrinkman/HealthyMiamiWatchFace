@@ -323,7 +323,7 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
         Paint mTopLayerBackgroundPaint;
         Paint mTopLayerBorderPaint;
         Paint mTopLayerBackgroundPaintLowBit;
-        Paint mTopLayerBorderPaintLowBit;
+        Paint mTopLayerBorderPaintNoBurn;
 
         //Arguably, mMPath would make sense to be static except that onDraw() actually
         // changes the offset based on changes to timeCenterX and timeCenterY. If
@@ -409,14 +409,14 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
             mTopLayerBorderPaint.setColor(INTERACTIVE_CIRCLE_BORDER_COLOR);
             mTopLayerBorderPaint.setStyle(Paint.Style.STROKE);
             mTopLayerBorderPaint.setAntiAlias(true);
-            mTopLayerBorderPaint.setStrokeWidth(3.0f);
+            mTopLayerBorderPaint.setStrokeWidth(2.0f);
 
-            mTopLayerBorderPaintLowBit = new Paint();
-            mTopLayerBorderPaintLowBit.setColor(LOWBIT_CIRCLE_BORDER_COLOR);
-            mTopLayerBorderPaintLowBit.setStyle(Paint.Style.STROKE);
-            mTopLayerBorderPaintLowBit.setAntiAlias(false);
-            mTopLayerBorderPaintLowBit.setStrokeWidth(2.0f);
-            mTopLayerBorderPaintLowBit.setPathEffect(mTopLayerBorderDashEffect);
+            mTopLayerBorderPaintNoBurn = new Paint();
+            mTopLayerBorderPaintNoBurn.setColor(LOWBIT_CIRCLE_BORDER_COLOR);
+            mTopLayerBorderPaintNoBurn.setStyle(Paint.Style.STROKE);
+            mTopLayerBorderPaintNoBurn.setAntiAlias(true);
+            mTopLayerBorderPaintNoBurn.setStrokeWidth(2.0f);
+            mTopLayerBorderPaintNoBurn.setPathEffect(mTopLayerBorderDashEffect);
 
             mHourPaint = createTextPaint(INTERACTIVE_DIGITS_COLOR, mNormalTypeface);
             mMinutePaint = createTextPaint(INTERACTIVE_DIGITS_COLOR);
@@ -568,6 +568,7 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
                 mStepPaint.setAntiAlias(antiAlias);
                 mTMPaint.setAntiAlias(antiAlias);
                 mMPathPaint.setAntiAlias(antiAlias);
+                mTopLayerBorderPaintNoBurn.setAntiAlias(antiAlias);
             }
             //Thinner fonts for less burn in
             if(mBurnInProtection){
@@ -654,19 +655,19 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
                 float pctAround = (mTime.second + millis/1000.0f)/60.0f;
 
                 if (mTime.minute % 2 == 0) {
-                    canvas.drawArc(circleLeft, circleTop, circleRight, circleBot, 270,
+                    canvas.drawArc(circleLeft-1, circleTop-1, circleRight+1, circleBot+1, 270,
                             360*pctAround, false, mTopLayerBorderPaint);
                 } else {
-                    canvas.drawArc(circleLeft, circleTop, circleRight, circleBot, (270+360*pctAround),
+                    canvas.drawArc(circleLeft-1, circleTop-1, circleRight+1, circleBot+1, (270+360*pctAround),
                             360*(1.0f-pctAround), false, mTopLayerBorderPaint);
                 }
             } else {
                 Paint whichBorderPaint = mTopLayerBorderPaint;
                 if(mBurnInProtection || mLowBitAmbient){
                     //Use dotted, whether in low bit or not
-                    whichBorderPaint = mTopLayerBorderPaintLowBit;
+                    whichBorderPaint = mTopLayerBorderPaintNoBurn;
                 }
-                canvas.drawArc(circleLeft, circleTop, circleRight, circleBot, 0,
+                canvas.drawArc(circleLeft-1, circleTop-1, circleRight+1, circleBot+1, 0,
                         360, false,
                         whichBorderPaint);
             }
@@ -716,7 +717,7 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
                         timeCenterX + fullWidth/2,
                         stepCenterY + fullHeight/2,
                         radius, radius,
-                        mTopLayerBorderPaintLowBit);
+                        mTopLayerBorderPaintNoBurn);
             }
             canvas.drawText(stepString, timeCenterX+SHOE_PATH_WIDTH/2,
                     stepCenterY+textHeight/2,mStepPaint);
