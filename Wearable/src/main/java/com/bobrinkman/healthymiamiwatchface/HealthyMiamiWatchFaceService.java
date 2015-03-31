@@ -830,7 +830,15 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
 
                 //Note: If pref doesn't exist, this will set the current day and
                 // step count, which is probably the right thing to do
-                if(todayIs != mSettings.getInt(PREF_CUR_DAY,0)){
+                //If todayIs greater than the last day we stored the pref, then
+                // we will update. But what if someone had a problem with the date
+                // on their device, and so the pref is set to something far in the future?
+                // If the current day is at least 2 days before the currently stored pref,
+                // we also go ahead and do an update. The idea here is that if someone
+                // goes back and forth between two timezones we don't want to reset the
+                // counter multiple times.
+                if(todayIs > mSettings.getInt(PREF_CUR_DAY,0) ||
+                        todayIs < mSettings.getInt(PREF_CUR_DAY,0)-1){
                     int lastSteps = mSettings.getInt(PREF_LAST_STEPS, 0);
                     SharedPreferences.Editor editor = mSettings.edit();
                     editor.putInt(PREF_CUR_DAY,todayIs);
