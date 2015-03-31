@@ -244,21 +244,22 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
     /**
      * These are visual elements that aren't changed after they are initialized,
      * they can be safely shared between different Engine instances
+     *
+     * I'd happily make these final if I could figure out how to statically initialize them
      */
-    private static Typeface mNormalTypeface = null;
-    private static Typeface mThinTypeface = null;
-
+    private static Typeface mNormalTypeface;
+    private static Typeface mThinTypeface;
     private static Shader mStippleShader;
 
-    private static Paint mBlackPaint; //For clearing the screen
-    private static Paint mInteractiveBackgroundPaint; //red gradient for watch face
-    private static Paint mAmbientBackgroundPaint; //gray gradient for watch face
-    private static Paint mTopLayerBackgroundPaint;
-    private static Paint mTopLayerBorderPaint;
-    private static Paint mTopLayerBackgroundPaintLowBit;
-    private static Paint mMFillPaint;
-    private static Paint mMNoBurnFillPaint;
-    private static Paint mMLowBitFillPaint;
+    private static final Paint mBlackPaint = new Paint(); //For clearing the screen
+    private static final Paint mInteractiveBackgroundPaint = new Paint(); //red gradient for watch face
+    private static final Paint mAmbientBackgroundPaint = new Paint(); //gray gradient for watch face
+    private static final Paint mTopLayerBackgroundPaint = new Paint();
+    private static final Paint mTopLayerBorderPaint = new Paint();
+    private static final Paint mTopLayerBackgroundPaintLowBit = new Paint();
+    private static final Paint mMFillPaint = new Paint();
+    private static final Paint mMNoBurnFillPaint = new Paint();
+    private static final Paint mMLowBitFillPaint = new Paint();
 
     @Override
     public Engine onCreateEngine() {
@@ -266,61 +267,38 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
     }
 
     public static void initializeStaticPaints(){
-        if(mBlackPaint == null) {
-            mBlackPaint = new Paint();
-            mBlackPaint.setColor(Color.argb(255, 0, 0, 0));
-        }
+        mBlackPaint.setColor(Color.argb(255, 0, 0, 0));
 
-        if(mInteractiveBackgroundPaint == null) {
-            mInteractiveBackgroundPaint = new Paint();
-            mInteractiveBackgroundPaint.setShader(new RadialGradient(WATCH_RADIUS, WATCH_RADIUS,
-                    WATCH_RADIUS,
-                    INTERACTIVE_BACKGROUND_COLOR_INNER, INTERACTIVE_BACKGROUND_COLOR_OUTER,
-                    Shader.TileMode.CLAMP));
-        }
-        if(mAmbientBackgroundPaint == null) {
-            mAmbientBackgroundPaint = new Paint();
-            mAmbientBackgroundPaint.setShader(new RadialGradient(WATCH_RADIUS, WATCH_RADIUS,
-                    WATCH_RADIUS,
-                    AMBIENT_BACKGROUND_COLOR_INNER, AMBIENT_BACKGROUND_COLOR_OUTER,
-                    Shader.TileMode.CLAMP));
-        }
+        mInteractiveBackgroundPaint.setShader(new RadialGradient(WATCH_RADIUS, WATCH_RADIUS,
+                WATCH_RADIUS,
+                INTERACTIVE_BACKGROUND_COLOR_INNER, INTERACTIVE_BACKGROUND_COLOR_OUTER,
+                Shader.TileMode.CLAMP));
 
-        if(mTopLayerBackgroundPaint == null) {
-            mTopLayerBackgroundPaint = new Paint();
-            mTopLayerBackgroundPaint.setColor(INTERACTIVE_CIRCLE_COLOR);
-            mTopLayerBackgroundPaint.setStyle(Paint.Style.FILL);
-            mTopLayerBackgroundPaint.setAntiAlias(true);
-        }
+        mAmbientBackgroundPaint.setShader(new RadialGradient(WATCH_RADIUS, WATCH_RADIUS,
+                WATCH_RADIUS,
+                AMBIENT_BACKGROUND_COLOR_INNER, AMBIENT_BACKGROUND_COLOR_OUTER,
+                Shader.TileMode.CLAMP));
 
-        if(mTopLayerBackgroundPaintLowBit == null) {
-            mTopLayerBackgroundPaintLowBit = new Paint();
-            mTopLayerBackgroundPaintLowBit.setColor(LOWBIT_CIRCLE_COLOR);
-            mTopLayerBackgroundPaintLowBit.setStyle(Paint.Style.FILL);
-            mTopLayerBackgroundPaintLowBit.setAntiAlias(false);
-        }
+        mTopLayerBackgroundPaint.setColor(INTERACTIVE_CIRCLE_COLOR);
+        mTopLayerBackgroundPaint.setStyle(Paint.Style.FILL);
+        mTopLayerBackgroundPaint.setAntiAlias(true);
 
-        if(mTopLayerBorderPaint == null) {
-            mTopLayerBorderPaint = new Paint();
-            mTopLayerBorderPaint.setColor(INTERACTIVE_CIRCLE_BORDER_COLOR);
-            mTopLayerBorderPaint.setStyle(Paint.Style.STROKE);
-            mTopLayerBorderPaint.setAntiAlias(true);
-            mTopLayerBorderPaint.setStrokeWidth(2.0f);
-        }
+        mTopLayerBackgroundPaintLowBit.setColor(LOWBIT_CIRCLE_COLOR);
+        mTopLayerBackgroundPaintLowBit.setStyle(Paint.Style.FILL);
+        mTopLayerBackgroundPaintLowBit.setAntiAlias(false);
 
-        if(mMFillPaint == null) {
-            mMFillPaint = new Paint();
-            mMFillPaint.setColor(INTERACTIVE_MIAMI_M_COLOR);
-            mMFillPaint.setStyle(Paint.Style.FILL);
-            mMFillPaint.setAntiAlias(true);
-        }
+        mTopLayerBorderPaint.setColor(INTERACTIVE_CIRCLE_BORDER_COLOR);
+        mTopLayerBorderPaint.setStyle(Paint.Style.STROKE);
+        mTopLayerBorderPaint.setAntiAlias(true);
+        mTopLayerBorderPaint.setStrokeWidth(2.0f);
 
-        if(mMLowBitFillPaint == null) {
-            mMLowBitFillPaint = new Paint();
-            mMLowBitFillPaint.setColor(INTERACTIVE_MIAMI_M_COLOR);
-            mMLowBitFillPaint.setStyle(Paint.Style.FILL);
-            mMLowBitFillPaint.setAntiAlias(false);
-        }
+        mMFillPaint.setColor(INTERACTIVE_MIAMI_M_COLOR);
+        mMFillPaint.setStyle(Paint.Style.FILL);
+        mMFillPaint.setAntiAlias(true);
+
+        mMLowBitFillPaint.setColor(INTERACTIVE_MIAMI_M_COLOR);
+        mMLowBitFillPaint.setStyle(Paint.Style.FILL);
+        mMLowBitFillPaint.setAntiAlias(false);
     }
 
     //Need a constant in for each message we might send. In this case
@@ -408,14 +386,14 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
         //Arguably, these paths would make sense to be static except that onDraw() actually
         // changes the offset based on changes to timeCenterX and timeCenterY. If
         // onDraw was refactored to not depend on bound, this could be changed
-        Path mMPath;
-        Path mShoePath;
+        final Path mMPath = new Path();
+        final Path mShoePath = new Path();
 
         //Cannot be static because anti-aliasing is turned on and off during run time
-        Paint mMPathPaint;
+        final Paint mMPathPaint = new Paint();
 
         //These are really instance variables, cannot be static
-        Time mTime;
+        final Time mTime = new Time();
         SensorManager mSensorManager = null;
         SharedPreferences mSettings;
 
@@ -460,14 +438,13 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
             mStepPaint.setTextSize(FONT_SIZE_LARGE/4);
             mTMPaint.setTextSize(FONT_SIZE_LARGE/8);
 
-            mMPath = new Path();
             mMPath.moveTo((M_POINTS[0][0]),(M_POINTS[0][1]));
             for(int i=1;i<M_POINTS.length;i++){
                 mMPath.lineTo((M_POINTS[i][0]),(M_POINTS[i][1]));
             }
             mMPath.close();
             mMPath.setFillType(Path.FillType.EVEN_ODD);
-            mShoePath = new Path();
+
             mShoePath.moveTo((float)(SHOE_POINTS[0][0]),(float)(SHOE_POINTS[0][1]));
             for(int i=1;i<SHOE_POINTS.length;i++){
                 mShoePath.lineTo((float)(SHOE_POINTS[i][0]),(float)(SHOE_POINTS[i][1]));
@@ -475,7 +452,6 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
             mShoePath.close();
             mShoePath.setFillType(Path.FillType.EVEN_ODD);
 
-            mMPathPaint = new Paint();
             mMPathPaint.setColor(INTERACTIVE_MIAMI_M_COLOR);
             mMPathPaint.setStyle(Paint.Style.STROKE);
             mMPathPaint.setAntiAlias(true);
@@ -490,14 +466,9 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
             }
 
             //Depends on mStippleShader, so can't go in initStaticPaints
-            if(mMNoBurnFillPaint == null) {
-                mMNoBurnFillPaint = new Paint();
-                mMNoBurnFillPaint.setShader(mStippleShader);
-                mMNoBurnFillPaint.setStyle(Paint.Style.FILL);
-                mMNoBurnFillPaint.setAntiAlias(false);
-            }
-
-            mTime = new Time();
+            mMNoBurnFillPaint.setShader(mStippleShader);
+            mMNoBurnFillPaint.setStyle(Paint.Style.FILL);
+            mMNoBurnFillPaint.setAntiAlias(false);
 
             mSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
             if(mSensorManager != null) {
