@@ -54,7 +54,7 @@ import android.view.SurfaceHolder;
 import java.util.TimeZone;
 
 /**
- * Miami University themed digital watch face with step counter.
+ * Provides a Miami University themed digital watch face with step counter.
  */
 public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
     private static final String TAG = "MiamiWatchFaceSrv";
@@ -263,6 +263,7 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
     private class Engine extends CanvasWatchFaceService.Engine implements
             SensorEventListener {
 
+        /** Detects when low-bit mode or burn-in-protection mode is enabled/disabled. */
         @Override
         public void onPropertiesChanged(Bundle properties) {
             super.onPropertiesChanged(properties);
@@ -302,6 +303,7 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
             }
         };
 
+        /** Handler to cope with time zone changes */
         final BroadcastReceiver mTimeZoneReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
