@@ -108,7 +108,7 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
     private static final int INTERACTIVE_DIGITS_COLOR = Color.argb(255,255,255,255);
     private static final int INTERACTIVE_CIRCLE_COLOR = Color.argb(96,0,0,0);
     private static final int LOWBIT_CIRCLE_COLOR = Color.argb(255,0,0,0);
-    private static final int INTERACTIVE_CIRCLE_BORDER_COLOR = Color.argb(196,255,255,255);
+    private static final int INTERACTIVE_CIRCLE_BORDER_COLOR = Color.argb(255,255,255,255);
     private static final int LOWBIT_CIRCLE_BORDER_COLOR = Color.argb(255,255,255,255);
     private static final int INTERACTIVE_MIAMI_M_COLOR = Color.argb(255,255,255,255);
 
@@ -119,64 +119,63 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
      * transition from the outer path to the inner path we
      * have a visual artifact. Need to keep it off screen.
      */
-    private static final float[][] M_POINTS =
-            {
-                    //Outer perimeter
-                    {0.0f,163.8f},
-                    {24.6f,122.8f},
-                    {29.2f,122.8f},
-                    {29.2f,41.0f},
-                    {24.8f,41.0f},
-                    {0.0f,0.0f},
-                    {72.8f,0.0f},
-                    {108.5f,61.2f},
-                    {144.1f,0.0f},
-                    {217.0f,0.0f},
-                    {191.8f,41.0f},
-                    {187.5f,41.0f},
-                    {187.5f,122.8f},
-                    {192.0f,122.8f},
-                    {217.0f,163.8f},
-                    {110.0f,163.8f},
-                    {134.7f,122.8f},
-                    {139.1f,122.8f},
-                    {139.1f,97.0f},
-                    {108.5f,149.1f},
-                    {77.4f,96.5f},
-                    {77.4f,122.8f},
-                    {81.9f,122.8f},
-                    {106.5f,163.8f},
+    private static final float[][] M_POINTS = {
+            //Outer perimeter
+            {0.0f,163.8f},
+            {24.6f,122.8f},
+            {29.2f,122.8f},
+            {29.2f,41.0f},
+            {24.8f,41.0f},
+            {0.0f,0.0f},
+            {72.8f,0.0f},
+            {108.5f,61.2f},
+            {144.1f,0.0f},
+            {217.0f,0.0f},
+            {191.8f,41.0f},
+            {187.5f,41.0f},
+            {187.5f,122.8f},
+            {192.0f,122.8f},
+            {217.0f,163.8f},
+            {110.0f,163.8f},
+            {134.7f,122.8f},
+            {139.1f,122.8f},
+            {139.1f,97.0f},
+            {108.5f,149.1f},
+            {77.4f,96.5f},
+            {77.4f,122.8f},
+            {81.9f,122.8f},
+            {106.5f,163.8f},
 
-                    //Repeat first point of outer perimenter
-                    {0.0f,163.8f},
+            //Repeat first point of outer perimenter
+            {0.0f,163.8f},
 
-                    //Inner perimeter
-                    {20.3f, 155.2f},
-                    {31.4f, 133.9f},
-                    {40.5f, 133.9f},
-                    {40.5f, 29.4f},
-                    {31.4f, 29.4f},
-                    {20.5f, 11.1f},
-                    {65.9f, 11.1f},
-                    {108.5f, 83.7f},
-                    {151.3f, 11.1f},
-                    {196.5f, 11.1f},
-                    {185.6f, 29.4f},
-                    {176.5f, 29.4f},
-                    {176.5f, 133.9f},
-                    {185.7f, 133.9f},
-                    {196.5f, 155.2f},
-                    {130.4f, 155.2f},
-                    {141.5f, 133.9f},
-                    {150.8f, 133.9f},
-                    {150.8f, 54.3f},
-                    {108.5f, 126.3f},
-                    {66.4f, 54.3f},
-                    {66.4f, 133.9f},
-                    {75.4f, 133.9f},
-                    {86.6f, 155.2f},
-                    {20.3f, 155.2f}
-            } ;
+            //Inner perimeter
+            {20.3f, 155.2f},
+            {31.4f, 133.9f},
+            {40.5f, 133.9f},
+            {40.5f, 29.4f},
+            {31.4f, 29.4f},
+            {20.5f, 11.1f},
+            {65.9f, 11.1f},
+            {108.5f, 83.7f},
+            {151.3f, 11.1f},
+            {196.5f, 11.1f},
+            {185.6f, 29.4f},
+            {176.5f, 29.4f},
+            {176.5f, 133.9f},
+            {185.7f, 133.9f},
+            {196.5f, 155.2f},
+            {130.4f, 155.2f},
+            {141.5f, 133.9f},
+            {150.8f, 133.9f},
+            {150.8f, 54.3f},
+            {108.5f, 126.3f},
+            {66.4f, 54.3f},
+            {66.4f, 133.9f},
+            {75.4f, 133.9f},
+            {86.6f, 155.2f},
+            {20.3f, 155.2f}
+    } ;
 
     private static final double[][] SHOE_POINTS = {
             {0.00674493,11.299466},
@@ -282,7 +281,7 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
         static final int MSG_UPDATE_WATCHFACE = 0;
 
         /** Handler to update the time periodically in interactive mode. */
-    //TODO: Figure out how this ought to be handled
+        //TODO: Figure out how this ought to be handled
         final Handler mUpdateTimeHandler = new Handler() {
             @Override
             public void handleMessage(Message message) {
@@ -668,10 +667,10 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
                 //Inner circle counts each second
                 pctAround = millis/1000.0f;
                 if (mTime.second % 2 == 0) {
-                    canvas.drawArc(circleLeft+1, circleTop+1, circleRight-1, circleBot-1, 270,
+                    canvas.drawArc(circleLeft+2, circleTop+2, circleRight-2, circleBot-2, 270,
                             360*pctAround, false, mTopLayerBorderPaint);
                 } else {
-                    canvas.drawArc(circleLeft+1, circleTop+1, circleRight-1, circleBot-1,
+                    canvas.drawArc(circleLeft+2, circleTop+2, circleRight-2, circleBot-2,
                             (270+360*pctAround),
                             360*(1.0f-pctAround), false, mTopLayerBorderPaint);
                 }
