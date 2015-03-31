@@ -72,7 +72,7 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
     //Measurement constants for fonts and font spacing
     private static final float FONT_SIZE_LARGE = 90.0f;
     //Padding around step counter as well as spacing between hours and minutes
-    private static final int   PADDING = 12;
+    private static final int PADDING = 12;
 
     //Dimensions of the Beveled M path
     private static final float M_PATH_WIDTH = 217.0f;
@@ -82,19 +82,6 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
      * 20 FPS seems to be sufficiently smooth looking
      */
     private static final long NORMAL_UPDATE_RATE_MS = 1000/20;
-
-    /**
-     * These are visual elements that aren't changed after they are initialized,
-     * they can be safely shared between different Engine instances
-     */
-    private static Typeface mNormalTypeface = null;
-    private static Typeface mThinTypeface = null;
-
-    private static Shader mStippleShader;
-
-    private static Paint mBlackPaint; //For clearing the screen
-    private static Paint mInteractiveBackgroundPaint; //red gradient for watch face
-    private static Paint mAmbientBackgroundPaint; //gray gradient for watch face
 
     private static final DashPathEffect mTopLayerBorderDashEffect
             = new DashPathEffect(new float[]{(2.0f),(4.0f)},0);
@@ -254,13 +241,97 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
             {0.04521493,11.876666}
     };
 
+    /**
+     * These are visual elements that aren't changed after they are initialized,
+     * they can be safely shared between different Engine instances
+     */
+    private static Typeface mNormalTypeface = null;
+    private static Typeface mThinTypeface = null;
+
+    private static Shader mStippleShader;
+
+    private static Paint mBlackPaint; //For clearing the screen
+    private static Paint mInteractiveBackgroundPaint; //red gradient for watch face
+    private static Paint mAmbientBackgroundPaint; //gray gradient for watch face
+    private static Paint mTopLayerBackgroundPaint;
+    private static Paint mTopLayerBorderPaint;
+    private static Paint mTopLayerBackgroundPaintLowBit;
+    private static Paint mMFillPaint;
+    private static Paint mMNoBurnFillPaint;
+    private static Paint mMLowBitFillPaint;
+
     @Override
     public Engine onCreateEngine() {
         return new Engine();
     }
 
+    public static void initializeStaticPaints(){
+        if(mBlackPaint == null) {
+            mBlackPaint = new Paint();
+            mBlackPaint.setColor(Color.argb(255, 0, 0, 0));
+        }
+
+        if(mInteractiveBackgroundPaint == null) {
+            mInteractiveBackgroundPaint = new Paint();
+            mInteractiveBackgroundPaint.setShader(new RadialGradient(WATCH_RADIUS, WATCH_RADIUS,
+                    WATCH_RADIUS,
+                    INTERACTIVE_BACKGROUND_COLOR_INNER, INTERACTIVE_BACKGROUND_COLOR_OUTER,
+                    Shader.TileMode.CLAMP));
+        }
+        if(mAmbientBackgroundPaint == null) {
+            mAmbientBackgroundPaint = new Paint();
+            mAmbientBackgroundPaint.setShader(new RadialGradient(WATCH_RADIUS, WATCH_RADIUS,
+                    WATCH_RADIUS,
+                    AMBIENT_BACKGROUND_COLOR_INNER, AMBIENT_BACKGROUND_COLOR_OUTER,
+                    Shader.TileMode.CLAMP));
+        }
+
+        if(mTopLayerBackgroundPaint == null) {
+            mTopLayerBackgroundPaint = new Paint();
+            mTopLayerBackgroundPaint.setColor(INTERACTIVE_CIRCLE_COLOR);
+            mTopLayerBackgroundPaint.setStyle(Paint.Style.FILL);
+            mTopLayerBackgroundPaint.setAntiAlias(true);
+        }
+
+        if(mTopLayerBackgroundPaintLowBit == null) {
+            mTopLayerBackgroundPaintLowBit = new Paint();
+            mTopLayerBackgroundPaintLowBit.setColor(LOWBIT_CIRCLE_COLOR);
+            mTopLayerBackgroundPaintLowBit.setStyle(Paint.Style.FILL);
+            mTopLayerBackgroundPaintLowBit.setAntiAlias(false);
+        }
+
+        if(mTopLayerBorderPaint == null) {
+            mTopLayerBorderPaint = new Paint();
+            mTopLayerBorderPaint.setColor(INTERACTIVE_CIRCLE_BORDER_COLOR);
+            mTopLayerBorderPaint.setStyle(Paint.Style.STROKE);
+            mTopLayerBorderPaint.setAntiAlias(true);
+            mTopLayerBorderPaint.setStrokeWidth(2.0f);
+        }
+
+        if(mMFillPaint == null) {
+            mMFillPaint = new Paint();
+            mMFillPaint.setColor(INTERACTIVE_MIAMI_M_COLOR);
+            mMFillPaint.setStyle(Paint.Style.FILL);
+            mMFillPaint.setAntiAlias(true);
+        }
+
+        if(mMLowBitFillPaint == null) {
+            mMLowBitFillPaint = new Paint();
+            mMLowBitFillPaint.setColor(INTERACTIVE_MIAMI_M_COLOR);
+            mMLowBitFillPaint.setStyle(Paint.Style.FILL);
+            mMLowBitFillPaint.setAntiAlias(false);
+        }
+    }
+
     private class Engine extends CanvasWatchFaceService.Engine implements
             SensorEventListener {
+
+        /**
+         * Whether the display supports fewer bits for each color in ambient mode. When true, we
+         * disable anti-aliasing in ambient mode.
+         */
+        boolean mLowBitAmbient;
+        boolean mBurnInProtection;
 
         /** Detects when low-bit mode or burn-in-protection mode is enabled/disabled. */
         @Override
@@ -321,9 +392,6 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
 
         //Paints for top layer backgrounds, the circle and the pill shape around the steps
         // These cannot be static because the alpha amount changes during run time
-        Paint mTopLayerBackgroundPaint;
-        Paint mTopLayerBorderPaint;
-        Paint mTopLayerBackgroundPaintLowBit;
         Paint mTopLayerBorderPaintNoBurn;
 
         //Arguably, mMPath would make sense to be static except that onDraw() actually
@@ -332,23 +400,11 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
         Path mMPath;
         Path mShoePath;
 
-        //mMFillPaint changes during run time. mMPathPaint doesn't, but I don't want
-        // to separate them
         Paint mMPathPaint;
-        Paint mMFillPaint;
-        Paint mMNoBurnFillPaint;
-        Paint mMLowBitFillPaint;
 
         Time mTime;
 
         SensorManager mSensorManager = null;
-
-        /**
-         * Whether the display supports fewer bits for each color in ambient mode. When true, we
-         * disable anti-aliasing in ambient mode.
-         */
-        boolean mLowBitAmbient;
-        boolean mBurnInProtection;
 
         SharedPreferences mSettings;
 
@@ -360,7 +416,7 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
             }
             super.onCreate(holder);
 
-            //Because these are static, might already be initialized
+            //getAssets() cannot be accessed from static, so can't go in initStaticPaints
             if(mNormalTypeface == null) {
                 mNormalTypeface = Typeface.createFromAsset(getAssets(), "Open Sans 600.ttf");
             }
@@ -376,41 +432,7 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
                     .setShowSystemUiTime(false)
                     .build());
 
-            if(mBlackPaint == null) {
-                mBlackPaint = new Paint();
-                mBlackPaint.setColor(Color.argb(255, 0, 0, 0));
-            }
-
-            if(mInteractiveBackgroundPaint == null) {
-                mInteractiveBackgroundPaint = new Paint();
-                mInteractiveBackgroundPaint.setShader(new RadialGradient(WATCH_RADIUS, WATCH_RADIUS,
-                        WATCH_RADIUS,
-                        INTERACTIVE_BACKGROUND_COLOR_INNER, INTERACTIVE_BACKGROUND_COLOR_OUTER,
-                        Shader.TileMode.CLAMP));
-            }
-            if(mAmbientBackgroundPaint == null) {
-                mAmbientBackgroundPaint = new Paint();
-                mAmbientBackgroundPaint.setShader(new RadialGradient(WATCH_RADIUS, WATCH_RADIUS,
-                        WATCH_RADIUS,
-                        AMBIENT_BACKGROUND_COLOR_INNER, AMBIENT_BACKGROUND_COLOR_OUTER,
-                        Shader.TileMode.CLAMP));
-            }
-
-            mTopLayerBackgroundPaint = new Paint();
-            mTopLayerBackgroundPaint.setColor(INTERACTIVE_CIRCLE_COLOR);
-            mTopLayerBackgroundPaint.setStyle(Paint.Style.FILL);
-            mTopLayerBackgroundPaint.setAntiAlias(true);
-
-            mTopLayerBackgroundPaintLowBit = new Paint();
-            mTopLayerBackgroundPaintLowBit.setColor(LOWBIT_CIRCLE_COLOR);
-            mTopLayerBackgroundPaintLowBit.setStyle(Paint.Style.FILL);
-            mTopLayerBackgroundPaintLowBit.setAntiAlias(false);
-
-            mTopLayerBorderPaint = new Paint();
-            mTopLayerBorderPaint.setColor(INTERACTIVE_CIRCLE_BORDER_COLOR);
-            mTopLayerBorderPaint.setStyle(Paint.Style.STROKE);
-            mTopLayerBorderPaint.setAntiAlias(true);
-            mTopLayerBorderPaint.setStrokeWidth(2.0f);
+            initializeStaticPaints();
 
             mTopLayerBorderPaintNoBurn = new Paint();
             mTopLayerBorderPaintNoBurn.setColor(LOWBIT_CIRCLE_BORDER_COLOR);
@@ -443,24 +465,13 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
             mShoePath.close();
             mShoePath.setFillType(Path.FillType.EVEN_ODD);
 
-            //Used in ambient mode only
             mMPathPaint = new Paint();
             mMPathPaint.setColor(INTERACTIVE_MIAMI_M_COLOR);
             mMPathPaint.setStyle(Paint.Style.STROKE);
             mMPathPaint.setAntiAlias(true);
             mMPathPaint.setStrokeWidth(1.0f);
 
-            mMFillPaint = new Paint();
-            mMFillPaint.setColor(INTERACTIVE_MIAMI_M_COLOR);
-            mMFillPaint.setStyle(Paint.Style.FILL);
-            mMFillPaint.setAntiAlias(true);
-
-            mMLowBitFillPaint = new Paint();
-            mMLowBitFillPaint.setColor(INTERACTIVE_MIAMI_M_COLOR);
-            mMLowBitFillPaint.setStyle(Paint.Style.FILL);
-            mMLowBitFillPaint.setAntiAlias(false);
-
-            // Load resources that have alternate values for round watches.
+            //getResources() cannot be accessed from static, so can't go in initStaticPaints
             Resources resources = HealthyMiamiWatchFaceService.this.getResources();
             if(mStippleShader == null) {
                 Bitmap stipple = BitmapFactory.decodeResource(resources, R.drawable.stipple);
@@ -468,10 +479,13 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
                         Shader.TileMode.REPEAT);
             }
 
-            mMNoBurnFillPaint = new Paint();
-            mMNoBurnFillPaint.setShader(mStippleShader);
-            mMNoBurnFillPaint.setStyle(Paint.Style.FILL);
-            mMNoBurnFillPaint.setAntiAlias(false);
+            //Depends on mStippleShader, so can't go in initStaticPaints
+            if(mMNoBurnFillPaint == null) {
+                mMNoBurnFillPaint = new Paint();
+                mMNoBurnFillPaint.setShader(mStippleShader);
+                mMNoBurnFillPaint.setStyle(Paint.Style.FILL);
+                mMNoBurnFillPaint.setAntiAlias(false);
+            }
 
             mTime = new Time();
 
