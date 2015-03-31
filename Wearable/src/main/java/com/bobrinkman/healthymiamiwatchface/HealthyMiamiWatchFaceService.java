@@ -51,6 +51,7 @@ import android.text.format.Time;
 import android.util.Log;
 import android.view.SurfaceHolder;
 
+import java.lang.ref.WeakReference;
 import java.util.TimeZone;
 
 /**
@@ -323,6 +324,43 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
         }
     }
 
+    //Need a constant in for each message we might send. In this case
+    // there is only one type of message to send, "invalidate the screen,
+    // so the watch face gets updated"
+    static final int MSG_UPDATE_WATCHFACE = 0;
+
+    /** Handler to update the time periodically in interactive mode. */
+    //Handler code from the sample is outdated, trips Lint HandlerLeak warning. My version is
+    // based on http://stackoverflow.com/questions/11278875/handlers-and-memory-leaks-in-android
+    static class WatchUpdateHandler extends Handler{
+        WeakReference<HealthyMiamiWatchFaceService.Engine> mEngineRef;
+
+        WatchUpdateHandler(HealthyMiamiWatchFaceService.Engine aEngine){
+            mEngineRef = new WeakReference<>(aEngine);
+        }
+
+        @Override
+        public void handleMessage(Message message) {
+            switch (message.what) {
+                case MSG_UPDATE_WATCHFACE:
+                    if (Log.isLoggable(TAG, Log.VERBOSE)) {
+                        Log.v(TAG, "updating time");
+                    }
+
+                    HealthyMiamiWatchFaceService.Engine theEngine = mEngineRef.get();
+
+                    theEngine.invalidate();
+                    if (theEngine.shouldTimerBeRunning()) {
+                        long timeMs = System.currentTimeMillis();
+                        long delayMs =
+                                NORMAL_UPDATE_RATE_MS - (timeMs % NORMAL_UPDATE_RATE_MS);
+                        theEngine.mUpdateTimeHandler.sendEmptyMessageDelayed(MSG_UPDATE_WATCHFACE, delayMs);
+                    }
+                    break;
+            }
+        }
+    }
+
     private class Engine extends CanvasWatchFaceService.Engine implements
             SensorEventListener {
 
@@ -346,32 +384,7 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
             }
         }
 
-        //Need a constant in for each message we might send. In this case
-        // there is only one type of message to send, "invalidate the screen,
-        // so the watch face gets updated"
-        static final int MSG_UPDATE_WATCHFACE = 0;
-
-        /** Handler to update the time periodically in interactive mode. */
-        //TODO: Figure out how this ought to be handled
-        final Handler mUpdateTimeHandler = new Handler() {
-            @Override
-            public void handleMessage(Message message) {
-                switch (message.what) {
-                    case MSG_UPDATE_WATCHFACE:
-                        if (Log.isLoggable(TAG, Log.VERBOSE)) {
-                            Log.v(TAG, "updating time");
-                        }
-                        invalidate();
-                        if (shouldTimerBeRunning()) {
-                            long timeMs = System.currentTimeMillis();
-                            long delayMs =
-                                    NORMAL_UPDATE_RATE_MS - (timeMs % NORMAL_UPDATE_RATE_MS);
-                            mUpdateTimeHandler.sendEmptyMessageDelayed(MSG_UPDATE_WATCHFACE, delayMs);
-                        }
-                        break;
-                }
-            }
-        };
+        final Handler mUpdateTimeHandler = new WatchUpdateHandler(this);
 
         /** Handler to cope with time zone changes */
         final BroadcastReceiver mTimeZoneReceiver = new BroadcastReceiver() {
@@ -390,22 +403,21 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
         Paint mStepPaint;
         Paint mTMPaint;
 
-        //Paints for top layer backgrounds, the circle and the pill shape around the steps
-        // These cannot be static because the alpha amount changes during run time
+        //Cannot be static because anti-aliasing is turned on and off during run time
         Paint mTopLayerBorderPaintNoBurn;
 
-        //Arguably, mMPath would make sense to be static except that onDraw() actually
+        //Arguably, these paths would make sense to be static except that onDraw() actually
         // changes the offset based on changes to timeCenterX and timeCenterY. If
         // onDraw was refactored to not depend on bound, this could be changed
         Path mMPath;
         Path mShoePath;
 
+        //Cannot be static because anti-aliasing is turned on and off during run time
         Paint mMPathPaint;
 
+        //These are really instance variables, cannot be static
         Time mTime;
-
         SensorManager mSensorManager = null;
-
         SharedPreferences mSettings;
 
         @SuppressLint("CommitPrefEdits")
