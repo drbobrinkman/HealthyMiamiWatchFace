@@ -805,6 +805,7 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
          *  - Step counter callback
          *  - onCreate
          */
+        //TODO: Check whether it is really safe to apply() instead of commit() here
         @SuppressLint("CommitPrefEdits")
         private synchronized void updateStepData(int curStepCount){
             if(curStepCount == CALLED_FROM_TIME_UPDATE){
