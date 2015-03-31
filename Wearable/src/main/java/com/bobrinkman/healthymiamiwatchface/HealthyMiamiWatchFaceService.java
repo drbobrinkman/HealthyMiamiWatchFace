@@ -19,7 +19,6 @@
 
 package com.bobrinkman.healthymiamiwatchface;
 
-import android.annotation.SuppressLint;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -420,7 +419,6 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
         SensorManager mSensorManager = null;
         SharedPreferences mSettings;
 
-        @SuppressLint("CommitPrefEdits")
         @Override
         public void onCreate(SurfaceHolder holder) {
             if (Log.isLoggable(TAG, Log.DEBUG)) {
@@ -817,8 +815,12 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
          *  - Step counter callback
          *  - onCreate
          */
-        //TODO: Check whether it is really safe to apply() instead of commit() here
-        @SuppressLint("CommitPrefEdits")
+        //I believe it is safe to use apply() instead of commit(). Because the method
+        // is synchronized, it isn't possible to have two editors editing mSettings
+        // at the same time, so don't have to worry about which invocation of apply()
+        // wins. According to the docs, SharedPreferences are singletons, so
+        // the in-memory structure will always be consistent, and the disk will be
+        // written with the latest version.
         private synchronized void updateStepData(int curStepCount){
             if(curStepCount == CALLED_FROM_TIME_UPDATE){
                 //being called from the time update function, check for day rollover.
@@ -833,7 +835,7 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
                     SharedPreferences.Editor editor = mSettings.edit();
                     editor.putInt(PREF_CUR_DAY,todayIs);
                     editor.putInt(PREF_MIDNIGHT_STEPS,lastSteps);
-                    editor.commit();
+                    editor.apply();
                 }
             } else if (curStepCount == CALLED_FROM_ON_CREATE) {
                 //In onCreate we may discover invalid preference state,
@@ -846,7 +848,7 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
                     editor.putInt(PREF_CUR_DAY, 0);
                     editor.putInt(PREF_MIDNIGHT_STEPS, 0);
                     editor.putInt(PREF_LAST_STEPS, 0);
-                    editor.commit();
+                    editor.apply();
                 }
             } else {
                 //Called by the sensor callback. Two possibilities:
@@ -863,12 +865,12 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
                     midnightSteps = -(lastSteps - midnightSteps);
                     editorMidnight.putInt(PREF_MIDNIGHT_STEPS, midnightSteps);
                     editorMidnight.putInt(PREF_LAST_STEPS, curStepCount);
-                    editorMidnight.commit();
+                    editorMidnight.apply();
                 } else {
                     //Just got a new step count, nothing wacky happened
                     SharedPreferences.Editor editor = mSettings.edit();
                     editor.putInt(PREF_LAST_STEPS, curStepCount);
-                    editor.commit();
+                    editor.apply();
                 }
             }
         }
