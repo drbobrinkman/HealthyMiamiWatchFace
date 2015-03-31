@@ -805,6 +805,7 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
          *  - Step counter callback
          *  - onCreate
          */
+        @SuppressLint("CommitPrefEdits")
         private synchronized void updateStepData(int curStepCount){
             if(curStepCount == CALLED_FROM_TIME_UPDATE){
                 //being called from the time update function, check for day rollover.
@@ -859,7 +860,6 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
             }
         }
 
-        @SuppressLint("CommitPrefEdits")
         @Override
         public void onSensorChanged(SensorEvent event) {
             //curStepCount is steps since system reboot
