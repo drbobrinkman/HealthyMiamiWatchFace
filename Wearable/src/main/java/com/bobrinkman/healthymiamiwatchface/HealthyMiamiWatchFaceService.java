@@ -49,6 +49,7 @@ import android.support.wearable.watchface.WatchFaceStyle;
 import android.text.format.Time;
 import android.util.Log;
 import android.view.SurfaceHolder;
+import android.view.WindowInsets;
 
 import java.lang.ref.WeakReference;
 import java.util.TimeZone;
@@ -59,10 +60,10 @@ import java.util.TimeZone;
 public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
     private static final String TAG = "MiamiWatchFaceSrv";
 
-    //TODO: These are all in px. Would be better to switch to dp for layouts
     //Watch measurement constants
-    private static final float WATCH_WIDTH = 320.0f;
-    private static final float WATCH_RADIUS =  WATCH_WIDTH/2.0f;
+    private static final float WATCH_DIM_ROUND = 320.0f;
+    private static final float WATCH_DIM_SQUARE = 280.0f;
+    private static final float WATCH_RADIUS =  WATCH_DIM_ROUND/2.0f;
 
     //Measurement constants for the main time display
     private static final float CIRCLE_WIDTH = WATCH_RADIUS;
@@ -290,7 +291,6 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
         mTopLayerBorderPaint.setColor(INTERACTIVE_CIRCLE_BORDER_COLOR);
         mTopLayerBorderPaint.setStyle(Paint.Style.STROKE);
         mTopLayerBorderPaint.setAntiAlias(true);
-        mTopLayerBorderPaint.setStrokeWidth(2.0f);
 
         mMFillPaint.setColor(INTERACTIVE_MIAMI_M_COLOR);
         mMFillPaint.setStyle(Paint.Style.FILL);
@@ -361,8 +361,18 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
             }
         }
 
-        final Handler mUpdateTimeHandler = new WatchUpdateHandler(this);
+        boolean mIsRound;
+        int mChinSize;
 
+        @Override
+        public void onApplyWindowInsets(WindowInsets insets) {
+            super.onApplyWindowInsets(insets);
+            //This gets called AFTER onCreate
+            mIsRound = insets.isRound();
+            mChinSize = insets.getSystemWindowInsetBottom();
+        }
+
+        final Handler mUpdateTimeHandler = new WatchUpdateHandler(this);
         /** Handler to cope with time zone changes */
         final BroadcastReceiver mTimeZoneReceiver = new BroadcastReceiver() {
             @Override
@@ -426,36 +436,19 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
             mTopLayerBorderPaintNoBurn.setColor(LOWBIT_CIRCLE_BORDER_COLOR);
             mTopLayerBorderPaintNoBurn.setStyle(Paint.Style.STROKE);
             mTopLayerBorderPaintNoBurn.setAntiAlias(true);
-            mTopLayerBorderPaintNoBurn.setStrokeWidth(2.0f);
             mTopLayerBorderPaintNoBurn.setPathEffect(mTopLayerBorderDashEffect);
 
             mHourPaint = createTextPaint(INTERACTIVE_DIGITS_COLOR, mNormalTypeface);
             mMinutePaint = createTextPaint(INTERACTIVE_DIGITS_COLOR);
             mStepPaint  = createTextPaint(INTERACTIVE_DIGITS_COLOR);
             mTMPaint  = createTextPaint(INTERACTIVE_DIGITS_COLOR, mNormalTypeface);
-            mHourPaint.setTextSize(FONT_SIZE_LARGE);
-            mMinutePaint.setTextSize(FONT_SIZE_LARGE/2);
-            mStepPaint.setTextSize(FONT_SIZE_LARGE/4);
-            mTMPaint.setTextSize(FONT_SIZE_LARGE/8);
 
-            mMPath.moveTo((M_POINTS[0][0]),(M_POINTS[0][1]));
-            for(int i=1;i<M_POINTS.length;i++){
-                mMPath.lineTo((M_POINTS[i][0]),(M_POINTS[i][1]));
-            }
-            mMPath.close();
             mMPath.setFillType(Path.FillType.EVEN_ODD);
-
-            mShoePath.moveTo((float)(SHOE_POINTS[0][0]),(float)(SHOE_POINTS[0][1]));
-            for(int i=1;i<SHOE_POINTS.length;i++){
-                mShoePath.lineTo((float)(SHOE_POINTS[i][0]),(float)(SHOE_POINTS[i][1]));
-            }
-            mShoePath.close();
             mShoePath.setFillType(Path.FillType.EVEN_ODD);
 
             mMPathPaint.setColor(INTERACTIVE_MIAMI_M_COLOR);
             mMPathPaint.setStyle(Paint.Style.STROKE);
             mMPathPaint.setAntiAlias(true);
-            mMPathPaint.setStrokeWidth(1.0f);
 
             //getResources() cannot be accessed from static, so can't go in initStaticPaints
             Resources resources = HealthyMiamiWatchFaceService.this.getResources();
@@ -469,6 +462,8 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
             mMNoBurnFillPaint.setShader(mStippleShader);
             mMNoBurnFillPaint.setStyle(Paint.Style.FILL);
             mMNoBurnFillPaint.setAntiAlias(false);
+
+            rescalePaints(1.0f,new Rect(0,0,(int)WATCH_DIM_ROUND,(int)WATCH_DIM_ROUND));
 
             mSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
             if(mSensorManager != null) {
@@ -586,11 +581,61 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
             return (result == 0) ? 12 : result;
         }
 
+        private float mUiScale=-1.0f;
+        private void rescalePaints(float uiScale, Rect bounds){
+            if(mUiScale == uiScale) return;
+
+            mUiScale = uiScale;
+            mTopLayerBorderPaintNoBurn.setStrokeWidth(Math.max(1,(int)uiScale*2.0f));
+
+            mHourPaint.setTextSize(uiScale*FONT_SIZE_LARGE);
+            mMinutePaint.setTextSize(uiScale*FONT_SIZE_LARGE/2);
+            mStepPaint.setTextSize(uiScale*FONT_SIZE_LARGE/4);
+            mTMPaint.setTextSize(uiScale*FONT_SIZE_LARGE/8);
+
+            mMPath.reset();
+            mMPath.moveTo(uiScale*(M_POINTS[0][0]),uiScale*(M_POINTS[0][1]));
+            for(int i=1;i<M_POINTS.length;i++){
+                mMPath.lineTo(uiScale*(M_POINTS[i][0]),uiScale*(M_POINTS[i][1]));
+            }
+            mMPath.close();
+
+            mShoePath.reset();
+            mShoePath.moveTo(uiScale*(float)(SHOE_POINTS[0][0]),
+                    uiScale*(float)(SHOE_POINTS[0][1]));
+            for(int i=1;i<SHOE_POINTS.length;i++){
+                mShoePath.lineTo(uiScale*(float)(SHOE_POINTS[i][0]),
+                        uiScale*(float)(SHOE_POINTS[i][1]));
+            }
+            mShoePath.close();
+
+            mMPathPaint.setStrokeWidth(Math.max(1,(int)(uiScale*1.0f)));
+
+            mTopLayerBorderPaint.setStrokeWidth(Math.max(1,(int)(uiScale*2.0f)));
+
+            mInteractiveBackgroundPaint.setShader(new RadialGradient(bounds.width()/2,
+                    bounds.height()/2,
+                    uiScale*WATCH_RADIUS,
+                    INTERACTIVE_BACKGROUND_COLOR_INNER, INTERACTIVE_BACKGROUND_COLOR_OUTER,
+                    Shader.TileMode.CLAMP));
+
+            mAmbientBackgroundPaint.setShader(new RadialGradient(bounds.width()/2,
+                    bounds.height()/2,
+                    uiScale*WATCH_RADIUS,
+                    AMBIENT_BACKGROUND_COLOR_INNER, AMBIENT_BACKGROUND_COLOR_OUTER,
+                    Shader.TileMode.CLAMP));
+        }
+
         @Override
         public void onDraw(Canvas canvas, Rect bounds) {
             mTime.setToNow();
             long millis = System.currentTimeMillis() % 1000;
             updateStepData(CALLED_FROM_TIME_UPDATE);
+
+            float watchSize = (float)(bounds.width() > bounds.height() ?
+                    bounds.width() : bounds.height());
+            float uiScale = watchSize / (mIsRound ? WATCH_DIM_ROUND : WATCH_DIM_SQUARE);
+            rescalePaints(uiScale,bounds);
 
             //Clear the screen to black
             canvas.drawRect(0, 0, bounds.width(), bounds.height(), mBlackPaint);
@@ -609,16 +654,16 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
             // both the center of the view and (in a circular watch), the
             // edge of the view. It is at a 45 degree angle up and right
             // of the center of the view
-            int timeCenterX = (int)(bounds.width()/2 + CIRCLE_OFFSET);
-            int timeCenterY = (int)(bounds.height()/2 - CIRCLE_OFFSET);
+            int timeCenterX = (int)(bounds.width()/2 + uiScale*CIRCLE_OFFSET);
+            int timeCenterY = (int)(bounds.height()/2 - uiScale*CIRCLE_OFFSET);
 
-            int circleLeft = (int)(timeCenterX - (CIRCLE_RADIUS));
-            int circleRight = (int)(circleLeft + (2 * CIRCLE_RADIUS));
-            int circleTop = (int)(timeCenterY - (CIRCLE_RADIUS));
-            int circleBot = (int)(circleTop + (2 * CIRCLE_RADIUS));
+            int circleLeft = (int)(timeCenterX - (uiScale*CIRCLE_RADIUS));
+            int circleRight = (int)(circleLeft + (2 * uiScale*CIRCLE_RADIUS));
+            int circleTop = (int)(timeCenterY - (uiScale*CIRCLE_RADIUS));
+            int circleBot = (int)(circleTop + (2 * uiScale*CIRCLE_RADIUS));
 
             //Want upper-right corner of path to line up with centerX, centerY
-            mMPath.offset(-M_PATH_WIDTH+timeCenterX,timeCenterY);
+            mMPath.offset(-uiScale*M_PATH_WIDTH+timeCenterX,timeCenterY);
             //Always fill. Use stipple only in ambient mode, and only when burninprotection
             // is enabled
             Paint whichFill = mMFillPaint;
@@ -633,17 +678,18 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
             }
             canvas.drawPath(mMPath,whichFill);
             //Add TM symbol
-            canvas.drawText("TM",timeCenterX+PADDING,timeCenterY+M_PATH_HEIGHT,mTMPaint);
+            canvas.drawText("TM",timeCenterX+uiScale*PADDING,timeCenterY+uiScale*M_PATH_HEIGHT,
+                    mTMPaint);
 
             //Draw outline only when stipple is used
             if(isInAmbientMode() && mBurnInProtection) {
                 canvas.drawPath(mMPath,mMPathPaint);
             }
-            mMPath.offset(M_PATH_WIDTH-timeCenterX,-timeCenterY);
+            mMPath.offset(uiScale*M_PATH_WIDTH-timeCenterX,-timeCenterY);
 
             // Draw the circle that goes under the time
             canvas.drawCircle(timeCenterX, timeCenterY,
-                    (CIRCLE_RADIUS),
+                    (uiScale*CIRCLE_RADIUS),
                     ((isInAmbientMode() && mLowBitAmbient) ?
                             mTopLayerBackgroundPaintLowBit : mTopLayerBackgroundPaint));
 
@@ -651,10 +697,12 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
                 float pctAround = (mTime.second + millis/1000.0f)/60.0f;
 
                 if (mTime.minute % 2 == 0) {
-                    canvas.drawArc(circleLeft-1, circleTop-1, circleRight+1, circleBot+1, 270,
+                    canvas.drawArc(circleLeft+uiScale*1, circleTop+uiScale*1,
+                            circleRight-uiScale*1, circleBot-uiScale*1, 270,
                             360*pctAround, false, mTopLayerBorderPaint);
                 } else {
-                    canvas.drawArc(circleLeft-1, circleTop-1, circleRight+1, circleBot+1,
+                    canvas.drawArc(circleLeft+uiScale*1, circleTop+uiScale*1,
+                            circleRight-uiScale*1, circleBot-uiScale*1,
                             (270+360*pctAround),
                             360*(1.0f-pctAround), false, mTopLayerBorderPaint);
                 }
@@ -662,10 +710,12 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
                 //Inner circle counts each second
                 pctAround = millis/1000.0f;
                 if (mTime.second % 2 == 0) {
-                    canvas.drawArc(circleLeft+2, circleTop+2, circleRight-2, circleBot-2, 270,
+                    canvas.drawArc(circleLeft+uiScale*4, circleTop+uiScale*4,
+                            circleRight-uiScale*4, circleBot-uiScale*4, 270,
                             360*pctAround, false, mTopLayerBorderPaint);
                 } else {
-                    canvas.drawArc(circleLeft+2, circleTop+2, circleRight-2, circleBot-2,
+                    canvas.drawArc(circleLeft+uiScale*4, circleTop+uiScale*4,
+                            circleRight-uiScale*4, circleBot-uiScale*4,
                             (270+360*pctAround),
                             360*(1.0f-pctAround), false, mTopLayerBorderPaint);
                 }
@@ -676,7 +726,8 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
                     //Use dotted, whether in low bit or not
                     whichBorderPaint = mTopLayerBorderPaintNoBurn;
                 }
-                canvas.drawArc(circleLeft-1, circleTop-1, circleRight+1, circleBot+1, 0,
+                canvas.drawArc(circleLeft-uiScale*1, circleTop-uiScale*1,
+                        circleRight+uiScale*1, circleBot+uiScale*1, 0,
                         360, false,
                         whichBorderPaint);
             }
@@ -689,7 +740,7 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
             float hourHeight = textBounds.height();
             mMinutePaint.getTextBounds(minuteString,0,minuteString.length(),textBounds);
             float minuteHeight = textBounds.height();
-            float totalHeight = hourHeight + PADDING + minuteHeight;
+            float totalHeight = hourHeight + uiScale*PADDING + minuteHeight;
 
             canvas.drawText(hourString, timeCenterX, timeCenterY + (hourHeight-(totalHeight/2)),
                     mHourPaint);
@@ -702,11 +753,11 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
 
             int textWidth = textBounds.width();
             int textHeight = textBounds.height();
-            int stepCenterY = timeCenterY + (int)(0.75*CIRCLE_WIDTH);
-            int contentWidth = textWidth + (int)SHOE_PATH_WIDTH;
-            int roomForRounded = textHeight+2*PADDING;
+            int stepCenterY = timeCenterY + (int)(0.75*uiScale*CIRCLE_WIDTH);
+            int contentWidth = textWidth + (int)(uiScale*SHOE_PATH_WIDTH);
+            int roomForRounded = textHeight+(int)(2*uiScale*PADDING);
             int fullWidth = contentWidth + roomForRounded;
-            int fullHeight = textHeight + 2*PADDING;
+            int fullHeight = textHeight + (int)(2*uiScale*PADDING);
             int radius = roomForRounded/2;
 
             canvas.drawRoundRect(
@@ -728,7 +779,7 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
                         radius, radius,
                         mTopLayerBorderPaintNoBurn);
             }
-            canvas.drawText(stepString, timeCenterX+SHOE_PATH_WIDTH/2,
+            canvas.drawText(stepString, timeCenterX+uiScale*SHOE_PATH_WIDTH/2,
                     stepCenterY+textHeight/2,mStepPaint);
 
             Paint whichPaint = mMFillPaint;
@@ -741,8 +792,8 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
                     whichPaint = mMLowBitFillPaint;
                 }
             }
-            float shoeOffsetX = timeCenterX - contentWidth / 2 - SHOE_PATH_WIDTH / 2;
-            float shoeOffsetY = stepCenterY - SHOE_PATH_HEIGHT/ 2;
+            float shoeOffsetX = timeCenterX - contentWidth / 2 - uiScale*SHOE_PATH_WIDTH / 2;
+            float shoeOffsetY = stepCenterY - uiScale*SHOE_PATH_HEIGHT/ 2;
             mShoePath.offset(shoeOffsetX,shoeOffsetY);
             canvas.drawPath(mShoePath, whichPaint);
             mShoePath.offset(-shoeOffsetX,-shoeOffsetY);
