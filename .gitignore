@@ -1,3 +1,5 @@
+manifest-merger-release-report.txt
+
 #built application files
 *.apk
 *.ap_
