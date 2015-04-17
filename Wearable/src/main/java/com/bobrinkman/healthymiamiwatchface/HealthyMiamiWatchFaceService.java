@@ -481,6 +481,9 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
         public void onDestroy() {
             mUpdateTimeHandler.removeMessages(MSG_UPDATE_WATCHFACE);
             super.onDestroy();
+            if(mSensorManager != null) {
+                mSensorManager.unregisterListener(this);
+            }
         }
 
         private Paint createTextPaint(int defaultInteractiveColor) {
@@ -844,6 +847,10 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
         // the in-memory structure will always be consistent, and the disk will be
         // written with the latest version.
         private synchronized void updateStepData(int curStepCount){
+            if(mSettings == null){
+                return;
+            }
+
             if(curStepCount == CALLED_FROM_TIME_UPDATE){
                 //being called from the time update function, check for day rollover.
                 //When day changes, store the current step count as the midnight
@@ -884,6 +891,7 @@ public class HealthyMiamiWatchFaceService extends CanvasWatchFaceService {
                 //Called by the sensor callback. Two possibilities:
                 // - Just a normal update of step count
                 // - curStepCount < LAST_STEPS ... this indicates a reboot.
+
                 if (curStepCount < mSettings.getInt(PREF_LAST_STEPS,0)) {
                     //If this was a reboot, then we want to save the amount of steps
                     // we had, by setting the MIDNIGHT_STEPS to an appropriate
