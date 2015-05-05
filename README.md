@@ -15,4 +15,4 @@ The Open Sans font is used under the Apache License, Version 2.0. See http://www
 Trademark Notices
 ------
 
-The "Beveled M" is a trademark of Miami University, and is used by permission. You may not redistribute the "Beveled M" or use it in a product without obtaining permission. See: http://www.miamioh.edu/ucm/trademarks-licensing/basics/trademarks/index.html
+The "Beveled M" is a trademark of Miami University, and is used by permission. You may not redistribute the "Beveled M" or use it in a product without obtaining permission. See: http://www.miamioh.edu/ucm/trademarks-licensing/
